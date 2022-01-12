@@ -15,7 +15,7 @@ def calc_correlation(array1, array2):
     c11 = np.sum(np.multiply((array1.astype(float)-m1), (array1.astype(float)-m1)))
     c22 = np.sum(np.multiply((array2.astype(float)-m2), (array2.astype(float)-m2)))
     c12 = np.sum(np.multiply((array1.astype(float)-m1), (array2.astype(float)-m2)))
-    return c12 / np.sqrt(c11) / np.sqrt(c12)
+    return c12 / np.sqrt(c11) / np.sqrt(c22)
 
 
 VIDEO_PATH = f'C:\\Users\\dporrat\\Desktop\\Netivei\\videos'
