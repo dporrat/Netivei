@@ -23,7 +23,7 @@ logo_filename = f'{VIDEO_PATH}\\netivei_logo.png'
 
 images = glob.glob(f'{VIDEO_PATH}\\capture_*.png')
 
-for image in images:
+for image in images[2:]:
     img = Image.open(image)
     if not img.size == (1280, 1024):
         raise ValueError(f'{this_script_name}: image size is not (1280, 1024)!')
@@ -41,21 +41,36 @@ for image in images:
     netivei_height = 49
     possible_logo = img.crop((netivei_start_x, netivei_start_y, netivei_start_x+netivei_width, netivei_start_y+netivei_height))
 
+    circle_start_x = crop_start_x + 363
+    circle_start_y = crop_start_y + 186
+    circle_width = 75
+    circle_height = 75
+    possible_circle = img.crop(
+        (circle_start_x, circle_start_y, circle_start_x + circle_width, circle_start_y + circle_height))
+
     if 1:  # test logo
         netiveiLogo = Image.open(logo_filename)
         netiveiLogo_BW = np.array(netiveiLogo.convert('L'))
         possibleLogo_BW = np.array(possible_logo.convert('L'))
         correlation = calc_correlation(netiveiLogo_BW, possibleLogo_BW)
+        if correlation > 0.9:
+            found_netivei_logo = True
+        else:
+            found_netivei_logo = False
 
         print(f'{this_script_name}: logo correlation is {correlation:.3f}')
 
-        if 1:  # show image and cropping
-            plt.figure()
-            plt.imshow(img)
-            plt.figure()
-            plt.imshow(img_cropped)
-            plt.figure()
-            plt.imshow(possible_logo)
+    if 1:  # show image and cropping
+        plt.figure()
+        plt.imshow(img_cropped)
+        if found_netivei_logo:
+            plt.title('Found Netivei Logo')
+        else:
+            plt.title('Did not find Netivei Logo')
 
-            plt.show()
+        plt.figure()
+        plt.imshow(possible_circle)
+        plt.title('Continue: draw an analytic circle here')
+
+        plt.show()
 plt.show()
