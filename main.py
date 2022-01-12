@@ -8,6 +8,10 @@ import time
 if __name__ == '__main__':
     SCREEN_SIZE = (1920, 1080)
     VIDEO_PATH = f'C:\\Users\\dporrat\\Desktop\\Netivei\\videos'
+
+    SCREEN_SIZE = (1280, 1024)
+    VIDEO_PATH = '/media/dana/second local disk1/dana/Netivei/videos'
+
     SECTION_LENGTH_SEC = 60
     FRAMES_PER_SEC = 10
 
