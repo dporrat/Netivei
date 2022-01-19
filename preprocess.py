@@ -172,6 +172,7 @@ if __name__ == '__main__':
                 cropped_image.save(cropped_filename)
                 print(f'Saved file {cropped_filename}')
             os.remove(image_filename)
-        time.sleep(60)
+            print(f'Deleted file {image_filename}')
+        time.sleep(10)
 
 

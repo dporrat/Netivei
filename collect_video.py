@@ -22,6 +22,7 @@ if __name__ == '__main__':
                 now_str = now_utc.strftime('%Y_%m_%d_%H_%M_%S_%f')
                 filename = f'{VIDEO_PATH}/capture_{now_str}.png'
                 img.save(filename)
+                print(f'saved file {filename}')
     else:  # save video
         while True:
             section_start_time_sec = time.time()
