@@ -50,7 +50,7 @@ if 1:
     netivei_start_y = 314
     netivei_width = 177
     netivei_height = 49
-    logo_filename = f'{video_input_path}\\netivei_logo.png'
+    logo_filename = f'netivei_logo.png'
     netiveiLogo = Image.open(logo_filename)
     netiveiLogo_BW = np.array(netiveiLogo.convert('L'))
 
