@@ -8,14 +8,14 @@ from PIL import Image
 from PIL import UnidentifiedImageError
 from matplotlib import pyplot as plt
 
-from constants import VIDEO_PATH, SCREEN_SIZE, OS_SEPARATOR
+from constants import VIDEO_BASEPATH, SCREEN_SIZE, OS_SEPARATOR
 
 
 RAD_PER_DEG = np.pi / 180
 
 this_script_name = os.path.basename(sys.argv[0])
-video_input_path = VIDEO_PATH
-video_cropped_path = VIDEO_PATH + OS_SEPARATOR + 'cropped_images'
+video_input_path = VIDEO_BASEPATH
+video_cropped_path = VIDEO_BASEPATH + OS_SEPARATOR + 'cropped_images'
 
 
 def calc_correlation(array1, array2):
