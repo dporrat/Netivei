@@ -41,4 +41,5 @@ if __name__ == '__main__':
                     frame = np.array(img)
                     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                     out.write(frame)
+                    print(f'saved file {filename}')
                 # cv2.waitKey(1000)
