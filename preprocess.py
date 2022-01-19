@@ -8,14 +8,14 @@ from PIL import Image
 from PIL import UnidentifiedImageError
 from matplotlib import pyplot as plt
 
-from constants import VIDEO_BASEPATH, SCREEN_SIZE, OS_SEPARATOR
+from constants import VIDEO_BASEPATH, SCREEN_SIZE, OS_SEPARATOR, CAMERA
 
 
 RAD_PER_DEG = np.pi / 180
 
 this_script_name = os.path.basename(sys.argv[0])
 video_input_path = VIDEO_BASEPATH
-video_cropped_path = VIDEO_BASEPATH + OS_SEPARATOR + 'cropped_images'
+video_cropped_path = VIDEO_BASEPATH + OS_SEPARATOR + CAMERA + OS_SEPARATOR + 'cropped_images'
 
 
 def calc_correlation(array1, array2):
@@ -47,8 +47,12 @@ if 1:
 
 # Netivei logo
 if 1:
-    netivei_start_x = 285
-    netivei_start_y = 314
+    if CAMERA == 'Abu_Gosh':
+        netivei_start_x = 9
+        netivei_start_y = 16
+    elif CAMERA == 'Raanana_Merkaz':
+        netivei_start_x = 0
+        netivei_start_y = 0
     netivei_width = 177
     netivei_height = 49
     logo_filename = f'netivei_logo.png'
@@ -57,8 +61,8 @@ if 1:
 
 # offline wait circle
 if 1:
-    circle_start_x = crop_start_x + 363
-    circle_start_y = crop_start_y + 186
+    circle_start_x = 363
+    circle_start_y = 186
     circle_width = 75
     circle_height = 75
     offline_circle_pixels = []
@@ -80,12 +84,17 @@ def preprocess_one_image(image_filename_):
     if not img.size == SCREEN_SIZE:
         raise ValueError(f'{this_script_name}: image size is not (1280, 1024)!')
 
-    img_cropped = img.crop((crop_start_x, crop_start_y, crop_start_x+crop_width, crop_start_y+crop_height))
+    try:
+        img_cropped = img.crop((crop_start_x, crop_start_y, crop_start_x+crop_width, crop_start_y+crop_height))
+    except OSError:
+        return None
 
-    possible_logo = img.crop((netivei_start_x, netivei_start_y, netivei_start_x+netivei_width, netivei_start_y+netivei_height))
+    possible_logo = img_cropped.crop((netivei_start_x, netivei_start_y, netivei_start_x+netivei_width, netivei_start_y+netivei_height))
 
-    possible_circle = img.crop(
+    possible_circle = img_cropped.crop(
         (circle_start_x, circle_start_y, circle_start_x + circle_width, circle_start_y + circle_height)).convert('L')
+
+    possible_circle = possible_circle.convert('L')
 
     # test logo
     if 1:
@@ -107,7 +116,7 @@ def preprocess_one_image(image_filename_):
         for x, y in offline_circle_pixels:
             sum_color += possible_circle_np[x, y]
         mean_color = sum_color / len(offline_circle_pixels)
-        if mean_color > 199:
+        if mean_color > 185:
             offline = True
             image_ok = False
         else:
@@ -147,7 +156,7 @@ def preprocess_one_image(image_filename_):
             plt.title(f'mean circle color is {mean_color:.1f}')
 
             # draw circle
-            if 0:
+            if 1:
                 ax = plt.gca()
                 color_pixel(ax, center[0],  center[1])
                 for x, y in offline_circle_pixels:
@@ -162,9 +171,18 @@ def preprocess_one_image(image_filename_):
 
 
 if __name__ == '__main__':
+    Video_Path = VIDEO_BASEPATH + OS_SEPARATOR + CAMERA
+
+    # debug
+    if 0:
+        image_filename = '/media/dana/second local disk1/dana/Netivei/videos/Raanana_Merkaz/capture_2022_01_19_13_49_16_473626.png'
+        cropped_image = preprocess_one_image(image_filename)
+
     while True:
-        images = glob.glob(video_input_path + OS_SEPARATOR + 'capture_*.png')
-        for image_filename in images[0:]:
+        images = glob.glob(Video_Path + OS_SEPARATOR + 'capture_*.png')
+        for image_filename in images:
+            if not os.path.exists(image_filename):
+                raise FileNotFoundError(f'cannot find {image_filename}')
             cropped_image = preprocess_one_image(image_filename)
             if cropped_image is not None:
                 # print(f'File {image_filename} has a good image')

@@ -16,4 +16,4 @@ CAMERA_LINKS = {'Abu_Gosh': 'https://www.iroads.co.il/%D7%AA%D7%99%D7%A7%D7%99%D
                                   '%D7%9E%D7%95%D7%AA/#camera1Modal188-43',
                 }
 
-CAMERA = 'Abu_Gosh'
+CAMERA = 'Raanana_Merkaz'
