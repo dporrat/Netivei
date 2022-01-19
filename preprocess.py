@@ -5,16 +5,17 @@ import time
 
 import numpy as np
 from PIL import Image
+from PIL import UnidentifiedImageError
 from matplotlib import pyplot as plt
 
-from constants import VIDEO_PATH, SCREEN_SIZE
+from constants import VIDEO_PATH, SCREEN_SIZE, OS_SEPARATOR
 
 
 RAD_PER_DEG = np.pi / 180
 
 this_script_name = os.path.basename(sys.argv[0])
 video_input_path = VIDEO_PATH
-video_cropped_path = VIDEO_PATH + f'\\cropped_images'
+video_cropped_path = VIDEO_PATH + OS_SEPARATOR + 'cropped_images'
 
 
 def calc_correlation(array1, array2):
@@ -72,7 +73,10 @@ if 1:
 
 
 def preprocess_one_image(image_filename_):
-    img = Image.open(image_filename_)
+    try:
+        img = Image.open(image_filename_)
+    except UnidentifiedImageError:
+        return None
     if not img.size == SCREEN_SIZE:
         raise ValueError(f'{this_script_name}: image size is not (1280, 1024)!')
 
@@ -94,7 +98,7 @@ def preprocess_one_image(image_filename_):
             found_netivei_logo = False
             image_ok = False
 
-        print(f'{this_script_name}: logo correlation is {correlation:.3f}')
+        # print(f'{this_script_name}: logo correlation is {correlation:.3f}')
 
     # test circle and error
     if 1:
@@ -159,12 +163,12 @@ def preprocess_one_image(image_filename_):
 
 if __name__ == '__main__':
     while True:
-        images = glob.glob(f'{video_input_path}\\capture_*.png')
+        images = glob.glob(video_input_path + OS_SEPARATOR + 'capture_*.png')
         for image_filename in images[0:]:
             cropped_image = preprocess_one_image(image_filename)
             if cropped_image is not None:
-                print(f'File {image_filename} has a good image')
-                cropped_filename = video_cropped_path + f'\\' + os.path.basename(image_filename)
+                # print(f'File {image_filename} has a good image')
+                cropped_filename = video_cropped_path + OS_SEPARATOR + os.path.basename(image_filename)
                 cropped_image.save(cropped_filename)
                 print(f'Saved file {cropped_filename}')
             os.remove(image_filename)
