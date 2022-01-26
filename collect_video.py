@@ -6,7 +6,7 @@ import shutil
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 
-from constants import TIME_BETWEEN_FRAMES_SEC, VIDEO_BASEPATH, OS_SEPARATOR, CAMERAS, CAMERA_URL, VIDEO_RESET_MIN
+from constants import TIME_BETWEEN_FRAMES_SEC, VIDEO_BASEPATH, OS_SEPARATOR, CAMERAS, CAMERA_LIST, CAMERA_URL, VIDEO_RESET_MIN
 
 
 def locate_element(driver_, xpath_string):
@@ -29,7 +29,7 @@ if __name__ == '__main__':
 
         temp_image_name = 'screenshot.png'
         drivers = []
-        for camera_name in list(CAMERAS.index):
+        for camera_name in CAMERA_LIST:
             drivers.append(webdriver.Firefox())
             # driver = webdriver.Chrome()
             drivers[-1].maximize_window()
@@ -44,7 +44,7 @@ if __name__ == '__main__':
         while True:
             while time.time() < start_time + VIDEO_RESET_MIN * 60:
                 for iiCamera, driver in enumerate(drivers):
-                    camera_name = list(CAMERAS.index)[iiCamera]
+                    camera_name = CAMERA_LIST[iiCamera]
                     driver.refresh()
 
                     search_element = locate_element(driver, "//input[@class='searchInput']")
@@ -55,7 +55,7 @@ if __name__ == '__main__':
 
                 time.sleep(10)
                 for iiCamera, driver in enumerate(drivers):
-                    camera_name = list(CAMERAS.index)[iiCamera]
+                    camera_name = CAMERA_LIST[iiCamera]
                     driver.execute_script("window.scrollTo(0, document.body.scrollHeight/2)")
                     camera_element = locate_element(driver, "//li[@class='col-md-4 cam-item']")
                     if camera_element is None:
@@ -71,7 +71,7 @@ if __name__ == '__main__':
                 time.sleep(3)
                 Video_Paths = []
                 for iiCamera, driver in enumerate(drivers):
-                    camera_name = list(CAMERAS.index)[iiCamera]
+                    camera_name = CAMERA_LIST[iiCamera]
                     try:
                         modal = driver.find_element(By.CLASS_NAME, 'modal-backdrop fade show')
                         print(f'{camera_name}: found modal-backdrop')

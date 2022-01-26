@@ -11,17 +11,16 @@ if not os.path.exists(VIDEO_BASEPATH):
 
 TIME_BETWEEN_FRAMES_SEC = 0.2
 
-if 0:
-    CAMERA_SEARCH_STRING = {'Abu_Gosh': 'אבו גוש',
-                            'Raanana_Merkaz': 'רעננה מרכז',
-                            'Aluf_Sadeh': 'אלוף שדה'}
+CAMERAS = pd.DataFrame({'name': ['Raanana_Merkaz', 'Aluf_Sadeh', 'Abu_Gosh'],
+                        'search_string': ['רעננה מרכז', 'אלוף שדה', 'אבו גוש'],
+                        'logo_start_x': [0, 0, 9],
+                        'logo_start_y': [0, 0, 16],
+                        })
 
-CAMERAS = pd.DataFrame({'name': ['Raanana_Merkaz', 'Aluf_Sadeh'],
-                       'search_string': ['רעננה מרכז', 'אלוף שדה']})
+CAMERA_LIST = ['Raanana_Merkaz', 'Aluf_Sadeh']
 
 CAMERAS.set_index('name', inplace=True)
 
 CAMERA_URL = 'https://www.iroads.co.il/%D7%AA%D7%99%D7%A7%D7%99%D7%99%D7%AA-%D7%9E%D7%A6%D7%9C%D7%9E%D7%95%D7%AA/'
-CAMERA = 'Aluf_Sadeh'
 
 VIDEO_RESET_MIN = 0.5

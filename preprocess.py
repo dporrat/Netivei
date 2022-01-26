@@ -8,14 +8,16 @@ from PIL import Image
 from PIL import UnidentifiedImageError
 from matplotlib import pyplot as plt
 
-from constants import VIDEO_BASEPATH, SCREEN_SIZE, OS_SEPARATOR, CAMERA
+from constants import VIDEO_BASEPATH, SCREEN_SIZE, OS_SEPARATOR, CAMERAS, CAMERA_LIST
 
 
 RAD_PER_DEG = np.pi / 180
 
 this_script_name = os.path.basename(sys.argv[0])
 video_input_path = VIDEO_BASEPATH
-video_cropped_path = VIDEO_BASEPATH + OS_SEPARATOR + CAMERA + OS_SEPARATOR + 'cropped_images'
+video_cropped_paths = []
+for camera_name in list(CAMERAS.index):
+    video_cropped_paths.append(VIDEO_BASEPATH + OS_SEPARATOR + camera_name + OS_SEPARATOR + 'cropped_images')
 
 
 def calc_correlation(array1, array2):
@@ -37,46 +39,10 @@ def color_pixel(ax_, x_, y_):
     ax_.pcolormesh(x__, y__, np.ones((1, 1)), cmap='spring')
 
 
-# crop location
-if 1:
-    # on desktop captures (1280, 1024) corner is (276, 298)
-    crop_start_x = 276
-    crop_start_y = 298
-    crop_width = 800
-    crop_height = 450
+def preprocess_one_image(image_filename_, camera_name_):
+    logo_start_x = CAMERAS.loc[camera_name_, 'logo_start_x']
+    logo_start_y = CAMERAS.loc[camera_name_, 'logo_start_y']
 
-# Netivei logo
-if 1:
-    if CAMERA == 'Abu_Gosh':
-        netivei_start_x = 9
-        netivei_start_y = 16
-    elif CAMERA == 'Raanana_Merkaz':
-        netivei_start_x = 0
-        netivei_start_y = 0
-    netivei_width = 177
-    netivei_height = 49
-    logo_filename = f'netivei_logo.png'
-    netiveiLogo = Image.open(logo_filename)
-    netiveiLogo_BW = np.array(netiveiLogo.convert('L'))
-
-# offline wait circle
-if 1:
-    circle_start_x = 363
-    circle_start_y = 186
-    circle_width = 75
-    circle_height = 75
-    offline_circle_pixels = []
-    center = (37, 37)
-    delta_theta_deg = 0.5
-    for radius in [32.5, 33.5, 34.5]:
-        for theta in np.arange(0, 360, delta_theta_deg):
-            x = round(center[0] + radius * np.cos(theta * RAD_PER_DEG))
-            y = round(center[0] + radius * np.sin(theta * RAD_PER_DEG))
-            if (x, y) not in offline_circle_pixels:
-                offline_circle_pixels.append((x, y))
-
-
-def preprocess_one_image(image_filename_):
     try:
         img = Image.open(image_filename_)
     except UnidentifiedImageError:
@@ -89,7 +55,7 @@ def preprocess_one_image(image_filename_):
     except OSError:
         return None
 
-    possible_logo = img_cropped.crop((netivei_start_x, netivei_start_y, netivei_start_x+netivei_width, netivei_start_y+netivei_height))
+    possible_logo = img_cropped.crop((logo_start_x, logo_start_y, logo_start_x + netivei_width, logo_start_y + netivei_height))
 
     possible_circle = img_cropped.crop(
         (circle_start_x, circle_start_y, circle_start_x + circle_width, circle_start_y + circle_height)).convert('L')
@@ -170,27 +136,67 @@ def preprocess_one_image(image_filename_):
         return None
 
 
+# preparations
+if 1:
+    # crop location
+    if 1:
+        # on desktop captures (1280, 1024) corner is (276, 298)
+        crop_start_x = 276
+        crop_start_y = 298
+        crop_width = 800
+        crop_height = 450
+
+    # Netivei logo
+    if 1:
+        # logo_start_x = CAMERAS.loc[camera_name, 'logo_start_x']
+        # logo_start_y = CAMERAS.loc[camera_name, 'logo_start_y']
+        netivei_width = 177
+        netivei_height = 49
+        logo_filename = f'netivei_logo.png'
+        netiveiLogo = Image.open(logo_filename)
+        netiveiLogo_BW = np.array(netiveiLogo.convert('L'))
+
+    # offline wait circle
+    if 1:
+        circle_start_x = 363
+        circle_start_y = 186
+        circle_width = 75
+        circle_height = 75
+        offline_circle_pixels = []
+        center = (37, 37)
+        delta_theta_deg = 0.5
+        for radius in [32.5, 33.5, 34.5]:
+            for theta in np.arange(0, 360, delta_theta_deg):
+                x = round(center[0] + radius * np.cos(theta * RAD_PER_DEG))
+                y = round(center[0] + radius * np.sin(theta * RAD_PER_DEG))
+                if (x, y) not in offline_circle_pixels:
+                    offline_circle_pixels.append((x, y))
+
 if __name__ == '__main__':
-    Video_Path = VIDEO_BASEPATH + OS_SEPARATOR + CAMERA
+    Video_Paths = []
+    for camera_name in CAMERA_LIST:
+        Video_Paths.append(VIDEO_BASEPATH + OS_SEPARATOR + camera_name)
 
     # debug
     if 0:
         image_filename = '/media/dana/second local disk1/dana/Netivei/videos/Raanana_Merkaz/capture_2022_01_19_13_49_16_473626.png'
-        cropped_image = preprocess_one_image(image_filename)
+        cropped_image = preprocess_one_image(image_filename, camera_name)
 
     while True:
-        images = glob.glob(Video_Path + OS_SEPARATOR + 'capture_*.png')
-        for image_filename in images:
-            if not os.path.exists(image_filename):
-                raise FileNotFoundError(f'cannot find {image_filename}')
-            cropped_image = preprocess_one_image(image_filename)
-            if cropped_image is not None:
-                # print(f'File {image_filename} has a good image')
-                cropped_filename = video_cropped_path + OS_SEPARATOR + os.path.basename(image_filename)
-                cropped_image.save(cropped_filename)
-                print(f'Saved file {cropped_filename}')
-            os.remove(image_filename)
-            print(f'Deleted file {image_filename}')
+        for iiCamera, Video_Path in enumerate(Video_Paths):
+            camera_name = CAMERA_LIST[iiCamera]
+            images = glob.glob(Video_Path + OS_SEPARATOR + 'capture_*.png')
+            for image_filename in images:
+                if not os.path.exists(image_filename):
+                    raise FileNotFoundError(f'cannot find {image_filename}')
+                cropped_image = preprocess_one_image(image_filename, camera_name)
+                if cropped_image is not None:
+                    # print(f'File {image_filename} has a good image')
+                    cropped_filename = video_cropped_path + OS_SEPARATOR + os.path.basename(image_filename)
+                    cropped_image.save(cropped_filename)
+                    print(f'Saved file {cropped_filename}')
+                os.remove(image_filename)
+                print(f'Deleted file {image_filename}')
         time.sleep(10)
 
 
