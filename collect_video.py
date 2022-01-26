@@ -39,7 +39,6 @@ if __name__ == '__main__':
             url = CAMERA_URL
             drivers[-1].get(url)
 
-
         start_time = time.time()
         while True:
             while time.time() < start_time + VIDEO_RESET_MIN * 60:
@@ -53,7 +52,7 @@ if __name__ == '__main__':
                     search_element.click()
                     search_element.send_keys(CAMERAS.loc[camera_name, 'search_string'])
 
-                time.sleep(10)
+                time.sleep(30)
                 for iiCamera, driver in enumerate(drivers):
                     camera_name = CAMERA_LIST[iiCamera]
                     driver.execute_script("window.scrollTo(0, document.body.scrollHeight/2)")
@@ -90,6 +89,7 @@ if __name__ == '__main__':
                     while time.time() < start_time + VIDEO_RESET_MIN * 60:
                         time_elapsed_sec = time.time() - prev_time_sec
                         # img = pyautogui.screenshot()
+                        iiFile = 0
                         for iiCamera, driver in enumerate(drivers):
                             img = driver.save_screenshot(temp_image_name)
                             if time_elapsed_sec >= TIME_BETWEEN_FRAMES_SEC:
@@ -100,6 +100,10 @@ if __name__ == '__main__':
                                 shutil.move(temp_image_name, filename)
                                 # print(f'saved file {filename}')
                                 print('.', end='')
+                                iiFile += 1
+                                if iiFile >30:
+                                    print('')
+                                    iiFile = 0
                     print(' ')
 
             start_time = time.time()

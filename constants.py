@@ -6,6 +6,31 @@ VIDEO_BASEPATH = f'C:\\Users\\dporrat\\Desktop\\Netivei\\videos'
 OS_SEPARATOR = f'\\'
 if not os.path.exists(VIDEO_BASEPATH):
     SCREEN_SIZE = (1280, 1024)
+    CROP_START_X = 276
+    CROP_START_Y = 298
+    CROP_WIDTH = 800
+    CROP_HEIGHT = 450
+
+    # selenium on linux
+    SCREEN_SIZE = (1207, 883)
+
+    # Raanana Merkaz from selenium communication problem
+    if 0:
+        CROP_START_X = 215
+        CROP_START_Y = 158
+        CROP_WIDTH = 779
+        CROP_HEIGHT = 450
+
+    # Aluf Sadeh from selenium good image
+    CROP_START_X = 204
+    CROP_START_Y = 158
+
+    if 0:
+        # Aluf Sadeh from selenium with play arrow
+        CROP_START_X = 211
+        CROP_START_Y = 163
+        CROP_WIDTH = 786
+        CROP_HEIGHT = 442
     VIDEO_BASEPATH = '/media/dana/second local disk1/dana/Netivei/videos'
     OS_SEPARATOR = f'/'
 
@@ -16,11 +41,12 @@ CAMERAS = pd.DataFrame({'name': ['Raanana_Merkaz', 'Aluf_Sadeh', 'Abu_Gosh'],
                         'logo_start_x': [0, 0, 9],
                         'logo_start_y': [0, 0, 16],
                         })
-
-CAMERA_LIST = ['Raanana_Merkaz', 'Aluf_Sadeh']
-
 CAMERAS.set_index('name', inplace=True)
+CAMERAS.sort_index(inplace=True)
+
+CAMERA_LIST = ['Aluf_Sadeh', 'Raanana_Merkaz']
+
 
 CAMERA_URL = 'https://www.iroads.co.il/%D7%AA%D7%99%D7%A7%D7%99%D7%99%D7%AA-%D7%9E%D7%A6%D7%9C%D7%9E%D7%95%D7%AA/'
 
-VIDEO_RESET_MIN = 0.5
+VIDEO_RESET_MIN = 2
