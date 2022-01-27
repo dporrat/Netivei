@@ -6,13 +6,19 @@ VIDEO_BASEPATH = f'C:\\Users\\dporrat\\Desktop\\Netivei\\videos'
 OS_SEPARATOR = f'\\'
 if not os.path.exists(VIDEO_BASEPATH):
     SCREEN_SIZE = (1280, 1024)
+    VIDEO_BASEPATH = '/media/dana/second local disk1/dana/Netivei/videos'
+    OS_SEPARATOR = f'/'
+
+    # selenium on linux
+    SCREEN_SIZE = (1207, 883)
+
+# crop positions
+if 1:
     CROP_START_X = 276
     CROP_START_Y = 298
     CROP_WIDTH = 800
     CROP_HEIGHT = 450
 
-    # selenium on linux
-    SCREEN_SIZE = (1207, 883)
 
     # Raanana Merkaz from selenium communication problem
     if 0:
@@ -31,8 +37,9 @@ if not os.path.exists(VIDEO_BASEPATH):
         CROP_START_Y = 163
         CROP_WIDTH = 786
         CROP_HEIGHT = 442
-    VIDEO_BASEPATH = '/media/dana/second local disk1/dana/Netivei/videos'
-    OS_SEPARATOR = f'/'
+
+DAY_START_UTC = 4
+DAY_END_UTC = 17
 
 TIME_BETWEEN_FRAMES_SEC = 0.2
 

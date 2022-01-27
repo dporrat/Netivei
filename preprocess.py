@@ -10,7 +10,8 @@ from matplotlib import pyplot as plt
 
 from constants import VIDEO_BASEPATH, SCREEN_SIZE, OS_SEPARATOR, \
     CAMERAS, CAMERA_LIST, \
-    CROP_START_X, CROP_START_Y, CROP_WIDTH, CROP_HEIGHT
+    CROP_START_X, CROP_START_Y, CROP_WIDTH, CROP_HEIGHT, \
+    DAY_START_UTC, DAY_END_UTC
 
 RAD_PER_DEG = np.pi / 180
 
@@ -142,6 +143,15 @@ def preprocess_one_image(image_filename_, camera_name_):
         else:
             paused = False
 
+    # test time
+    if 1:
+        hour_utc = int(image_filename_.split('_')[4])
+        if hour_utc < DAY_START_UTC or hour_utc >= DAY_END_UTC:
+            night = True
+            image_ok = False
+        else:
+            night = False
+
     # show image and cropping
     if 0:
         plt.figure()
@@ -163,6 +173,9 @@ def preprocess_one_image(image_filename_, camera_name_):
 
             if error:
                 title_str += ' error.'
+
+            if night:
+                title_str += ' night.'
 
         plt.title(title_str)
 
