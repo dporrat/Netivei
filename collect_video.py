@@ -6,7 +6,8 @@ import shutil
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 
-from constants import TIME_BETWEEN_FRAMES_SEC, VIDEO_BASEPATH, OS_SEPARATOR, CAMERAS, CAMERA_LIST, CAMERA_URL, VIDEO_RESET_MIN
+from constants import TIME_BETWEEN_FRAMES_SEC, VIDEO_BASEPATH, OS_SEPARATOR, CAMERAS, \
+    CAMERA_LIST, CAMERA_URL, VIDEO_RESET_MIN
 
 
 def locate_element(driver_, xpath_string):
@@ -31,8 +32,8 @@ if __name__ == '__main__':
         drivers = []
         for camera_name in CAMERA_LIST:
             drivers.append(webdriver.Firefox())
-            # driver = webdriver.Chrome()
             drivers[-1].maximize_window()
+            # driver = webdriver.Chrome()
             # driver.get("https://www.google.com/")
             # driver.find_element_by_name("q").send_keys("javatpoint")
 
@@ -48,7 +49,7 @@ if __name__ == '__main__':
 
                     search_element = locate_element(driver, "//input[@class='searchInput']")
                     if search_element is None:
-                        raise ValueError('Cannot find search link')
+                        raise ValueError(f'Cannot find search link for {camera_name}')
                     search_element.click()
                     search_element.send_keys(CAMERAS.loc[camera_name, 'search_string'])
 
@@ -61,9 +62,9 @@ if __name__ == '__main__':
                         raise ValueError(f'Cannot find camera link for {camera_name}')
 
                     # camera_element = driver.find_element(By.XPATH, "//li[@class='col-md-4 cam-item']")
-                    camera_element = locate_element(driver, "//li[@class='col-md-4 cam-item']")
-                    if camera_element is None:
-                        raise ValueError('Cannot find camera link')
+                    # camera_element = locate_element(driver, "//li[@class='col-md-4 cam-item']")
+                    # if camera_element is None:
+                    #     raise ValueError('Cannot find camera link')
                     camera_element.click()
                     # time.sleep(1)
 
@@ -77,7 +78,6 @@ if __name__ == '__main__':
                         modal.click()
                     except:
                         print(f'{camera_name}: did not find modal-backdrop')
-                        stam = 0
 
                     Video_Paths.append(VIDEO_BASEPATH + OS_SEPARATOR + camera_name)
                     if not os.path.exists(Video_Paths[-1]):
@@ -88,22 +88,21 @@ if __name__ == '__main__':
                     prev_time_sec = time.time()
                     while time.time() < start_time + VIDEO_RESET_MIN * 60:
                         time_elapsed_sec = time.time() - prev_time_sec
-                        # img = pyautogui.screenshot()
-                        iiFile = 0
-                        for iiCamera, driver in enumerate(drivers):
-                            img = driver.save_screenshot(temp_image_name)
-                            if time_elapsed_sec >= TIME_BETWEEN_FRAMES_SEC:
+
+                        if time_elapsed_sec >= TIME_BETWEEN_FRAMES_SEC:
+                            iiFile = 0
+                            for iiCamera, driver in enumerate(drivers):
+                                img = driver.save_screenshot(temp_image_name)
                                 now_utc = datetime.datetime.now(datetime.timezone.utc)
                                 now_str = now_utc.strftime('%Y_%m_%d_%H_%M_%S_%f')
                                 filename = f'{Video_Paths[iiCamera]}/capture_{now_str}.png'
-                                # img.save(filename)
                                 shutil.move(temp_image_name, filename)
-                                # print(f'saved file {filename}')
                                 print('.', end='')
-                                iiFile += 1
-                                if iiFile >30:
-                                    print('')
-                                    iiFile = 0
+                                if iiCamera == 0:
+                                    iiFile += 1
+                                    if iiFile > 30:
+                                        print('')
+                                        iiFile = 0
                     print(' ')
 
             start_time = time.time()
