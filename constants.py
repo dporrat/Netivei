@@ -85,3 +85,9 @@ if 1:
             if (x, y) not in PLAY_TRIANGLE_PIXELS:
                 PLAY_TRIANGLE_PIXELS.append((x, y))
 
+# top right corner
+if 1:
+    TOP_RIGHT_START_X = 670
+    TOP_RIGHT_START_Y = 0
+    TOP_RIGHT_WIDTH = 130
+    TOP_RIGHT_HEIGHT = 12
