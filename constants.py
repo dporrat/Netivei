@@ -109,6 +109,8 @@ if 1:
 if 1:
     CAMERA_LIST = ['Aluf_Sadeh', 'Raanana_Merkaz']
 
+    CAMERA_LIST = ['Aluf_Sadeh']
+
     CAMERA_URL = 'https://www.iroads.co.il/%D7%AA%D7%99%D7%A7%D7%99%D7%99%D7%AA-%D7%9E%D7%A6%D7%9C%D7%9E%D7%95%D7%AA/'
 
     VIDEO_RESET_MIN = 15
