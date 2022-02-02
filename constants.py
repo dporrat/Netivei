@@ -109,6 +109,8 @@ if 1:
 if 1:
     CAMERA_LIST = ['Aluf_Sadeh', 'Raanana_Merkaz']
 
+    CAMERA_LIST = ['Aluf_Sadeh']
+
     CAMERA_URL = 'https://www.iroads.co.il/%D7%AA%D7%99%D7%A7%D7%99%D7%99%D7%AA-%D7%9E%D7%A6%D7%9C%D7%9E%D7%95%D7%AA/'
 
     VIDEO_RESET_MIN = 15
@@ -130,12 +132,12 @@ if 1:
     CIRCLE_WIDTH = 75
     CIRCLE_HEIGHT = 75
     OFFLINE_CIRCLE_PIXELS = []
-    center = (37, 37)
+    CENTER_PIXEL = (37, 37)
     delta_theta_deg = 0.5
     for radius in [32.5, 33.5, 34.5]:
         for theta in np.arange(0, 360, delta_theta_deg):
-            x = round(center[0] + radius * np.cos(theta * RAD_PER_DEG))
-            y = round(center[0] + radius * np.sin(theta * RAD_PER_DEG))
+            x = round(CENTER_PIXEL[0] + radius * np.cos(theta * RAD_PER_DEG))
+            y = round(CENTER_PIXEL[0] + radius * np.sin(theta * RAD_PER_DEG))
             if (x, y) not in OFFLINE_CIRCLE_PIXELS:
                 OFFLINE_CIRCLE_PIXELS.append((x, y))
 
