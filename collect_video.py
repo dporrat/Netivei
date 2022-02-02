@@ -85,7 +85,7 @@ def collect_one_camera(camera_name_):
                                     ii_file = 0
                                 if not first_image_checked:
                                     if 0:
-                                        filename = r'/media/dana/second local disk1/dana/Netivei/videos/Aluf_Sadeh' + OS_SEPARATOR + 'capture_2022_02_02_12_06_51_567975.png'
+                                        filename = r'/media/dana/second local disk1/dana/Netivei/videos/Aluf_Sadeh' + OS_SEPARATOR + 'capture_2022_02_02_12_04_33_144107.png'
                                         camera_name_ = 'Aluf_Sadeh'
                                     stam, paused = preprocess_one_image(filename, camera_name_)
                                     first_image_checked = True

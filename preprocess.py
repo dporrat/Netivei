@@ -119,21 +119,22 @@ def test_cropped_image(img_cropped, camera_name_, image_filename_=None, show_fig
         for x_, y_ in PLAY_TRIANGLE_PIXELS:
             sum_color_triangle += possible_triangle_np[x_, y_]
         mean_color_triangle = sum_color_triangle / len(PLAY_TRIANGLE_PIXELS)
-        if mean_color_triangle > 185:
+        if mean_color_triangle > 160:
             paused = True
             image_ok = False
         else:
             paused = False
 
     # test time
-    night = False
-    if image_filename_ is not None:
-        hour_utc = int(image_filename_.split(OS_SEPARATOR)[-1].split('_')[4])
-        if hour_utc < DAY_START_UTC or hour_utc >= DAY_END_UTC:
-            night = True
-            image_ok = False
-        else:
-            night = False
+    if 1:
+        night = False
+        if image_filename_ is not None:
+            hour_utc = int(image_filename_.split(OS_SEPARATOR)[-1].split('_')[4])
+            if hour_utc < DAY_START_UTC or hour_utc >= DAY_END_UTC:
+                night = True
+                image_ok = False
+            else:
+                night = False
 
     # show image and cropping
     if show_figures:
@@ -189,11 +190,7 @@ def test_cropped_image(img_cropped, camera_name_, image_filename_=None, show_fig
                     color_pixel(ax, x_, y_)
 
         plt.show()
-
-    if paused:
-        return image_ok, paused
-    else:
-        return None, None
+    return image_ok, paused
 
 
 def preprocess_one_image(image_filename_, camera_name_):
@@ -221,7 +218,7 @@ def preprocess_one_image(image_filename_, camera_name_):
         plt.imshow(img_cropped, interpolation=None)
         plt.show()
 
-    image_ok, paused = test_cropped_image(img_cropped, camera_name_, image_filename_)
+    image_ok, paused = test_cropped_image(img_cropped, camera_name_, image_filename_=image_filename_)
     if image_ok is None:
         return None, None
     else:
