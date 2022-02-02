@@ -1,27 +1,25 @@
-import glob
-import sys
-import os
-import time
-
-import numpy as np
-from PIL import Image
-from PIL import UnidentifiedImageError
 from matplotlib import pyplot as plt
 
-from constants import VIDEO_BASEPATH, SCREEN_SIZE, OS_SEPARATOR, \
-    CAMERAS, CAMERA_LIST, \
-    CROP_START_X, CROP_START_Y, CROP_WIDTH, CROP_HEIGHT, \
-    DAY_START_UTC, DAY_END_UTC
+if 1:
+    import glob
+    import inspect
+    import sys
+    import os
+    import time
 
-RAD_PER_DEG = np.pi / 180
+    import numpy as np
+    from PIL import Image
+    from PIL import UnidentifiedImageError
 
-this_script_name = os.path.basename(sys.argv[0])
-video_input_path = VIDEO_BASEPATH
-video_cropped_paths = []
-for camera_name in list(CAMERAS.index):
-    video_cropped_paths.append(VIDEO_BASEPATH + OS_SEPARATOR + camera_name + OS_SEPARATOR + 'cropped_images')
-    if not os.path.exists(video_cropped_paths[-1]):
-        os.mkdir(video_cropped_paths[-1])
+if 1:
+    from constants import VIDEO_BASEPATH, CROP_DATA, OS_SEPARATOR, \
+        CAMERAS, CAMERA_LIST, \
+        DAY_START_UTC, DAY_END_UTC, \
+        NETIVEI_WIDTH, NETIVEI_HEIGHT, \
+        CIRCLE_START_X, CIRCLE_START_Y, CIRCLE_WIDTH,  CIRCLE_HEIGHT, \
+        TRIANGLE_START_X, TRIANGLE_START_Y, TRIANGLE_WIDTH, TRIANGLE_HEIGHT, \
+        NETIVEI_LOGO_BW, \
+        OFFLINE_CIRCLE_PIXELS, PLAY_TRIANGLE_PIXELS
 
 
 def calc_correlation(array1, array2):
@@ -45,49 +43,53 @@ def color_pixel(ax_, x_, y_):
 
 
 def preprocess_one_image(image_filename_, camera_name_):
-    logo_start_x = CAMERAS.loc[camera_name_, 'logo_start_x']
-    logo_start_y = CAMERAS.loc[camera_name_, 'logo_start_y']
+    this_function_name = inspect.currentframe().f_code.co_name
+
+    logo_start_x = CAMERAS[camera_name_]['logo_start_x']
+    logo_start_y = CAMERAS[camera_name_]['logo_start_y']
 
     try:
         img = Image.open(image_filename_)
     except UnidentifiedImageError:
-        return None
-    if not img.size == SCREEN_SIZE:
-        raise ValueError(f'{this_script_name}: image size is not (1280, 1024)!')
+        return None, None
+    # if not img.size == SCREEN_SIZE:
+    #     raise ValueError(f'{this_function_name}: image size is not (1280, 1024)!')
+    # if img.size not in CROP_DATA.index.Values:
+    #     raise ValueError(f'{this_function_name}: image size {img.size} not found in list')
 
     try:
-        img_cropped = img.crop((CROP_START_X,
-                                CROP_START_Y,
-                                CROP_START_X + CROP_WIDTH,
-                                CROP_START_Y + CROP_HEIGHT))
+        if img.size not in CROP_DATA.keys():
+            raise ValueError(f'{this_function_name}: could not find data from screen of size {img.size}')
+        img_cropped = img.crop((CROP_DATA[img.size]['crop_start_x'],
+                                CROP_DATA[img.size]['crop_start_y'],
+                                CROP_DATA[img.size]['crop_start_x'] + CROP_DATA[img.size]['crop_width'],
+                                CROP_DATA[img.size]['crop_start_y'] + CROP_DATA[img.size]['crop_height']))
     except OSError:
-        return None
+        return None, None
 
     if 0:
         plt.figure()
         plt.imshow(img)
         plt.figure()
-        plt.imshow(img_cropped)
+        plt.imshow(img_cropped, interpolation=None)
         plt.show()
 
     possible_logo = img_cropped.crop(
-        (logo_start_x, logo_start_y, logo_start_x + netivei_width, logo_start_y + netivei_height))
+        (logo_start_x, logo_start_y, logo_start_x + NETIVEI_WIDTH, logo_start_y + NETIVEI_HEIGHT))
 
     possible_circle = img_cropped.crop(
-        (circle_start_x,
-         circle_start_y,
-         circle_start_x + circle_width,
-         circle_start_y + circle_height)).convert('L')
+        (CIRCLE_START_X,
+         CIRCLE_START_Y,
+         CIRCLE_START_X + CIRCLE_WIDTH,
+         CIRCLE_START_Y + CIRCLE_HEIGHT)).convert('L')
 
     possible_circle = possible_circle.convert('L')
 
     possible_triangle = img_cropped.crop(
-        (triangle_start_x,
-         triangle_start_y,
-         triangle_start_x + triangle_width,
-         triangle_start_y + triangle_height)).convert('L')
-
-    possible_triangle = possible_triangle.convert('L')
+        (TRIANGLE_START_X,
+         TRIANGLE_START_Y,
+         TRIANGLE_START_X + TRIANGLE_WIDTH,
+         TRIANGLE_START_Y + TRIANGLE_HEIGHT)).convert('L')
 
     if 0:
         plt.figure()
@@ -95,29 +97,35 @@ def preprocess_one_image(image_filename_, camera_name_):
         plt.figure()
         plt.imshow(possible_logo)
         plt.figure()
-        plt.imshow(possible_circle)
+        plt.imshow(possible_circle, cmap='gray')
         plt.show()
 
     # test logo
     if 1:
         image_ok = True
         possible_logo_bw = np.array(possible_logo.convert('L'))
-        correlation = calc_correlation(netiveiLogo_BW, possible_logo_bw)
+        correlation = calc_correlation(NETIVEI_LOGO_BW, possible_logo_bw)
         if correlation > 0.9:
             found_netivei_logo = True
         else:
             found_netivei_logo = False
             image_ok = False
+        if 0:
+            fig, ax = plt.subplots(2, 1)
+            ax[0].imshow(NETIVEI_LOGO_BW, cmap='gray', vmin=0, vmax=255)
+            ax[0].set_title('Saved logo')
+            ax[1].imshow(possible_logo_bw, cmap='gray', vmin=0, vmax=255)
+            ax[1].set_title(f'From Current Image, corrlation is {correlation}')
 
-        # print(f'{this_script_name}: logo correlation is {correlation:.3f}')
+        # print(f'{this_function_name}: logo correlation is {correlation:.3f}')
 
     # test circle and error
     if 1:
         possible_circle_np = np.array(possible_circle)
         sum_color_circle = 0
-        for x_, y_ in offline_circle_pixels:
+        for x_, y_ in OFFLINE_CIRCLE_PIXELS:
             sum_color_circle += possible_circle_np[x_, y_]
-        mean_color_circle = sum_color_circle / len(offline_circle_pixels)
+        mean_color_circle = sum_color_circle / len(OFFLINE_CIRCLE_PIXELS)
         if mean_color_circle > 185:
             offline = True
             image_ok = False
@@ -134,9 +142,9 @@ def preprocess_one_image(image_filename_, camera_name_):
     if 1:
         possible_triangle_np = np.array(possible_triangle)
         sum_color_triangle = 0
-        for x_, y_ in play_triangle_pixels:
+        for x_, y_ in PLAY_TRIANGLE_PIXELS:
             sum_color_triangle += possible_triangle_np[x_, y_]
-        mean_color_triangle = sum_color_triangle / len(play_triangle_pixels)
+        mean_color_triangle = sum_color_triangle / len(PLAY_TRIANGLE_PIXELS)
         if mean_color_triangle > 185:
             paused = True
             image_ok = False
@@ -207,52 +215,21 @@ def preprocess_one_image(image_filename_, camera_name_):
         plt.show()
 
     if image_ok:
-        return img_cropped
+        return img_cropped, paused
     else:
-        return None
+        return None, None
 
-
-# preparations
-if 1:
-    # Netivei logo
-    if 1:
-        # logo_start_x = CAMERAS.loc[camera_name, 'logo_start_x']
-        # logo_start_y = CAMERAS.loc[camera_name, 'logo_start_y']
-        netivei_width = 177
-        netivei_height = 49
-        logo_filename = f'netivei_logo.png'
-        netiveiLogo = Image.open(logo_filename)
-        netiveiLogo_BW = np.array(netiveiLogo.convert('L'))
-
-    # offline wait circle
-    if 1:
-        circle_start_x = 363
-        circle_start_y = 186
-        circle_width = 75
-        circle_height = 75
-        offline_circle_pixels = []
-        center = (37, 37)
-        delta_theta_deg = 0.5
-        for radius in [32.5, 33.5, 34.5]:
-            for theta in np.arange(0, 360, delta_theta_deg):
-                x = round(center[0] + radius * np.cos(theta * RAD_PER_DEG))
-                y = round(center[0] + radius * np.sin(theta * RAD_PER_DEG))
-                if (x, y) not in offline_circle_pixels:
-                    offline_circle_pixels.append((x, y))
-
-    # play triangle
-    if 1:
-        triangle_start_x = 365
-        triangle_start_y = 186
-        triangle_width = 80
-        triangle_height = 80
-        play_triangle_pixels = []
-        for x in range(7, 81):
-            for y in np.arange(int(x/2)-1, 78-int(x/2)):
-                if (x, y) not in play_triangle_pixels:
-                    play_triangle_pixels.append((x, y))
 
 if __name__ == '__main__':
+
+    this_script_name = os.path.basename(sys.argv[0])
+    video_input_path = VIDEO_BASEPATH
+    video_cropped_paths = []
+    for camera_name in list(CAMERA_LIST):
+        video_cropped_paths.append(VIDEO_BASEPATH + OS_SEPARATOR + camera_name + OS_SEPARATOR + 'cropped_images')
+        if not os.path.exists(video_cropped_paths[-1]):
+            os.mkdir(video_cropped_paths[-1])
+
     Video_Paths = []
     for camera_name in CAMERA_LIST:
         Video_Paths.append(VIDEO_BASEPATH + OS_SEPARATOR + camera_name)
@@ -274,7 +251,7 @@ if __name__ == '__main__':
                 if 0:
                     image_filename = VIDEO_BASEPATH + OS_SEPARATOR + 'Aluf_Sadeh' + OS_SEPARATOR + 'capture_2022_01_26_12_55_33_762499.png'
                     image_filename = VIDEO_BASEPATH + OS_SEPARATOR + 'Aluf_Sadeh' + OS_SEPARATOR + 'capture_2022_01_26_12_56_03_865190.png'
-                cropped_image = preprocess_one_image(image_filename, camera_name)
+                cropped_image, stam = preprocess_one_image(image_filename, camera_name)
                 if cropped_image is not None:
                     # print(f'File {image_filename} has a good image')
                     cropped_filename = video_cropped_path + OS_SEPARATOR + os.path.basename(image_filename)
