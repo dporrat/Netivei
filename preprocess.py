@@ -266,12 +266,13 @@ if __name__ == '__main__':
                 if 0:
                     image_filename = VIDEO_BASEPATH + OS_SEPARATOR + 'Aluf_Sadeh' + OS_SEPARATOR + 'capture_2022_01_26_12_55_33_762499.png'
                     image_filename = VIDEO_BASEPATH + OS_SEPARATOR + 'Aluf_Sadeh' + OS_SEPARATOR + 'capture_2022_01_26_12_56_03_865190.png'
-                cropped_image, stam, stam = preprocess_one_image(image_filename, camera_name)
+                cropped_image, image_ok, stam = preprocess_one_image(image_filename, camera_name)
                 if cropped_image is not None:
-                    # print(f'File {image_filename} has a good image')
-                    cropped_filename = video_cropped_path + OS_SEPARATOR + os.path.basename(image_filename)
-                    cropped_image.save(cropped_filename)
-                    # print(f'Saved file {cropped_filename}')
+                    if image_ok:
+                        # print(f'File {image_filename} has a good image')
+                        cropped_filename = video_cropped_path + OS_SEPARATOR + os.path.basename(image_filename)
+                        cropped_image.save(cropped_filename)
+                        # print(f'Saved file {cropped_filename}')
                 os.remove(image_filename)
                 print('.', end='')
                 iiFile += 1
