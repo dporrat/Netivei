@@ -145,8 +145,8 @@ def preprocess_one_image(image_filename_, camera_name_):
 
     # test time
     if 1:
-        hour_utc = int(image_filename_.split('_')[4])
-        if hour_utc <= DAY_START_UTC or hour_utc >= DAY_END_UTC:
+        hour_utc = int(image_filename_.split(OS_SEPARATOR)[-1].split('_')[4])
+        if hour_utc < DAY_START_UTC or hour_utc >= DAY_END_UTC:
             night = True
             image_ok = False
         else:
