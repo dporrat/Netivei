@@ -1,25 +1,23 @@
 from matplotlib import pyplot as plt
 
-if 1:
-    import glob
-    import inspect
-    import sys
-    import os
-    import time
+import glob
+import inspect
+import sys
+import os
+import time
 
-    import numpy as np
-    from PIL import Image
-    from PIL import UnidentifiedImageError
+import numpy as np
+from PIL import Image
+from PIL import UnidentifiedImageError
 
-if 1:
-    from constants import VIDEO_BASEPATH, CROP_DATA, OS_SEPARATOR, \
-        CAMERAS, CAMERA_LIST, \
-        DAY_START_UTC, DAY_END_UTC, \
-        NETIVEI_WIDTH, NETIVEI_HEIGHT, \
-        CIRCLE_START_X, CIRCLE_START_Y, CIRCLE_WIDTH,  CIRCLE_HEIGHT, \
-        TRIANGLE_START_X, TRIANGLE_START_Y, TRIANGLE_WIDTH, TRIANGLE_HEIGHT, \
-        NETIVEI_LOGO_BW, \
-        OFFLINE_CIRCLE_PIXELS, PLAY_TRIANGLE_PIXELS
+from constants import VIDEO_BASEPATH, CROP_DATA, OS_SEPARATOR, \
+    CAMERAS, CAMERA_LIST, \
+    DAY_START_UTC, DAY_END_UTC, \
+    NETIVEI_WIDTH, NETIVEI_HEIGHT, \
+    CIRCLE_START_X, CIRCLE_START_Y, CIRCLE_WIDTH,  CIRCLE_HEIGHT, \
+    TRIANGLE_START_X, TRIANGLE_START_Y, TRIANGLE_WIDTH, TRIANGLE_HEIGHT, \
+    NETIVEI_LOGO_BW, \
+    OFFLINE_CIRCLE_PIXELS, PLAY_TRIANGLE_PIXELS, CENTER_PIXEL
 
 
 def calc_correlation(array1, array2):
@@ -42,37 +40,9 @@ def color_pixel(ax_, x_, y_):
     ax_.pcolormesh(x__, y__, np.ones((1, 1)), cmap='spring')
 
 
-def preprocess_one_image(image_filename_, camera_name_):
-    this_function_name = inspect.currentframe().f_code.co_name
-
+def test_cropped_image(img_cropped, camera_name_, image_filename_=None, show_figures=False):
     logo_start_x = CAMERAS[camera_name_]['logo_start_x']
     logo_start_y = CAMERAS[camera_name_]['logo_start_y']
-
-    try:
-        img = Image.open(image_filename_)
-    except UnidentifiedImageError:
-        return None, None
-    # if not img.size == SCREEN_SIZE:
-    #     raise ValueError(f'{this_function_name}: image size is not (1280, 1024)!')
-    # if img.size not in CROP_DATA.index.Values:
-    #     raise ValueError(f'{this_function_name}: image size {img.size} not found in list')
-
-    try:
-        if img.size not in CROP_DATA.keys():
-            raise ValueError(f'{this_function_name}: could not find data from screen of size {img.size}')
-        img_cropped = img.crop((CROP_DATA[img.size]['crop_start_x'],
-                                CROP_DATA[img.size]['crop_start_y'],
-                                CROP_DATA[img.size]['crop_start_x'] + CROP_DATA[img.size]['crop_width'],
-                                CROP_DATA[img.size]['crop_start_y'] + CROP_DATA[img.size]['crop_height']))
-    except OSError:
-        return None, None
-
-    if 0:
-        plt.figure()
-        plt.imshow(img)
-        plt.figure()
-        plt.imshow(img_cropped, interpolation=None)
-        plt.show()
 
     possible_logo = img_cropped.crop(
         (logo_start_x, logo_start_y, logo_start_x + NETIVEI_WIDTH, logo_start_y + NETIVEI_HEIGHT))
@@ -83,7 +53,7 @@ def preprocess_one_image(image_filename_, camera_name_):
          CIRCLE_START_X + CIRCLE_WIDTH,
          CIRCLE_START_Y + CIRCLE_HEIGHT)).convert('L')
 
-    possible_circle = possible_circle.convert('L')
+    possible_circle_bw = possible_circle.convert('L')
 
     possible_triangle = img_cropped.crop(
         (TRIANGLE_START_X,
@@ -93,11 +63,9 @@ def preprocess_one_image(image_filename_, camera_name_):
 
     if 0:
         plt.figure()
-        plt.imshow(img)
-        plt.figure()
         plt.imshow(possible_logo)
         plt.figure()
-        plt.imshow(possible_circle, cmap='gray')
+        plt.imshow(possible_circle_bw, cmap='gray')
         plt.show()
 
     # test logo
@@ -121,22 +89,28 @@ def preprocess_one_image(image_filename_, camera_name_):
 
     # test circle and error
     if 1:
-        possible_circle_np = np.array(possible_circle)
+        possible_circle_np = np.array(possible_circle_bw)
         sum_color_circle = 0
         for x_, y_ in OFFLINE_CIRCLE_PIXELS:
             sum_color_circle += possible_circle_np[x_, y_]
         mean_color_circle = sum_color_circle / len(OFFLINE_CIRCLE_PIXELS)
-        if mean_color_circle > 185:
+        if mean_color_circle > 160:
             offline = True
             image_ok = False
         else:
             offline = False
 
-        if mean_color_circle < 60:
+        if mean_color_circle < 20:
             error = True
             image_ok = False
         else:
             error = False
+
+        if 0:
+            plt.figure()
+            plt.imshow(possible_circle_np, cmap='gray')
+            plt.title(f'mean_color_circle is {mean_color_circle}')
+            plt.show()
 
     # test triangle
     if 1:
@@ -152,7 +126,8 @@ def preprocess_one_image(image_filename_, camera_name_):
             paused = False
 
     # test time
-    if 1:
+    night = False
+    if image_filename_ is not None:
         hour_utc = int(image_filename_.split(OS_SEPARATOR)[-1].split('_')[4])
         if hour_utc < DAY_START_UTC or hour_utc >= DAY_END_UTC:
             night = True
@@ -161,7 +136,7 @@ def preprocess_one_image(image_filename_, camera_name_):
             night = False
 
     # show image and cropping
-    if 0:
+    if show_figures:
         plt.figure()
         plt.imshow(img_cropped)
 
@@ -188,41 +163,78 @@ def preprocess_one_image(image_filename_, camera_name_):
         plt.title(title_str)
 
         # show circle in middle
-        if 0:
+        if 1:
             plt.figure()
-            plt.imshow(possible_circle, cmap='gray')
+            plt.imshow(possible_circle_bw, cmap='gray')
             plt.title(f'mean circle color is {mean_color_circle:.1f}')
 
             # draw circle
-            if 0:
+            if 1:
                 ax = plt.gca()
-                color_pixel(ax, center[0], center[1])
-                for x_, y_ in offline_circle_pixels:
+                color_pixel(ax, CENTER_PIXEL[0], CENTER_PIXEL[1])
+                for x_, y_ in OFFLINE_CIRCLE_PIXELS:
                     color_pixel(ax, x_, y_)
 
         # show triangle in middle
-        if 1:
+        if show_figures:
             plt.figure()
             plt.imshow(possible_triangle, cmap='gray')
+            plt.title(f'mean triangle color is {mean_color_triangle:.1f}')
 
             # draw triangle
             if 1:
                 ax = plt.gca()
-                color_pixel(ax, center[0], center[1])
-                for x_, y_ in play_triangle_pixels:
+                color_pixel(ax, CENTER_PIXEL[0], CENTER_PIXEL[1])
+                for x_, y_ in PLAY_TRIANGLE_PIXELS:
                     color_pixel(ax, x_, y_)
 
         plt.show()
 
-    if image_ok:
-        return img_cropped, paused
+    if paused:
+        return image_ok, paused
     else:
         return None, None
 
 
-if __name__ == '__main__':
+def preprocess_one_image(image_filename_, camera_name_):
+    this_function_name = inspect.currentframe().f_code.co_name
 
+    try:
+        img = Image.open(image_filename_)
+    except UnidentifiedImageError:
+        return None, None
+
+    try:
+        if img.size not in CROP_DATA.keys():
+            raise ValueError(f'{this_function_name}: could not find data from screen of size {img.size}')
+        img_cropped = img.crop((CROP_DATA[img.size]['crop_start_x'],
+                                CROP_DATA[img.size]['crop_start_y'],
+                                CROP_DATA[img.size]['crop_start_x'] + CROP_DATA[img.size]['crop_width'],
+                                CROP_DATA[img.size]['crop_start_y'] + CROP_DATA[img.size]['crop_height']))
+    except OSError:
+        return None, None
+
+    if 0:
+        plt.figure()
+        plt.imshow(img)
+        plt.figure()
+        plt.imshow(img_cropped, interpolation=None)
+        plt.show()
+
+    image_ok, paused = test_cropped_image(img_cropped, camera_name_, image_filename_)
+    if image_ok is None:
+        return None, None
+    else:
+        return img_cropped, paused
+
+
+if __name__ == '__main__':
     this_script_name = os.path.basename(sys.argv[0])
+    if 0:
+        img_cropped = Image.open(r"C:\Users\dporrat\Desktop\Netivei\videos\Aluf_Sadeh\cropped_images\capture_2022_02_02_11_30_28_831763.png")
+        camera_name_ = 'Aluf_Sadeh'
+        test_cropped_image(img_cropped, camera_name_, show_figures=True)
+
     video_input_path = VIDEO_BASEPATH
     video_cropped_paths = []
     for camera_name in list(CAMERA_LIST):
