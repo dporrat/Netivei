@@ -199,7 +199,7 @@ def preprocess_one_image(image_filename_, camera_name_):
     try:
         img = Image.open(image_filename_)
     except UnidentifiedImageError:
-        return None, None
+        return None, None, None
 
     try:
         if img.size not in CROP_DATA.keys():
@@ -209,7 +209,7 @@ def preprocess_one_image(image_filename_, camera_name_):
                                 CROP_DATA[img.size]['crop_start_x'] + CROP_DATA[img.size]['crop_width'],
                                 CROP_DATA[img.size]['crop_start_y'] + CROP_DATA[img.size]['crop_height']))
     except OSError:
-        return None, None
+        return None, None, None
 
     if 0:
         plt.figure()
@@ -220,9 +220,9 @@ def preprocess_one_image(image_filename_, camera_name_):
 
     image_ok, paused = test_cropped_image(img_cropped, camera_name_, image_filename_=image_filename_)
     if image_ok is None:
-        return None, None
+        return None, None, None
     else:
-        return img_cropped, paused
+        return img_cropped, image_ok, paused
 
 
 if __name__ == '__main__':
@@ -231,6 +231,12 @@ if __name__ == '__main__':
         img_cropped = Image.open(r"C:\Users\dporrat\Desktop\Netivei\videos\Aluf_Sadeh\cropped_images\capture_2022_02_02_11_30_28_831763.png")
         camera_name_ = 'Aluf_Sadeh'
         test_cropped_image(img_cropped, camera_name_, show_figures=True)
+
+    if 0:
+        camera_name = 'Aluf_Sadeh'
+        image_filename = VIDEO_BASEPATH + OS_SEPARATOR + camera_name + OS_SEPARATOR + 'capture_2022_02_02_12_17_32_733220.png'
+        print(os.path.exists(image_filename))
+        cropped_image, image_ok, paused = preprocess_one_image(image_filename, camera_name)
 
     video_input_path = VIDEO_BASEPATH
     video_cropped_paths = []
@@ -246,7 +252,7 @@ if __name__ == '__main__':
     # debug
     if 0:
         image_filename = '/media/dana/second local disk1/dana/Netivei/videos/Raanana_Merkaz/capture_2022_01_19_13_49_16_473626.png'
-        cropped_image = preprocess_one_image(image_filename, camera_name)
+        cropped_image, image_ok, paused = preprocess_one_image(image_filename, camera_name)
 
     while True:
         for iiCamera, Video_Path in enumerate(Video_Paths):
@@ -260,7 +266,7 @@ if __name__ == '__main__':
                 if 0:
                     image_filename = VIDEO_BASEPATH + OS_SEPARATOR + 'Aluf_Sadeh' + OS_SEPARATOR + 'capture_2022_01_26_12_55_33_762499.png'
                     image_filename = VIDEO_BASEPATH + OS_SEPARATOR + 'Aluf_Sadeh' + OS_SEPARATOR + 'capture_2022_01_26_12_56_03_865190.png'
-                cropped_image, stam = preprocess_one_image(image_filename, camera_name)
+                cropped_image, stam, stam = preprocess_one_image(image_filename, camera_name)
                 if cropped_image is not None:
                     # print(f'File {image_filename} has a good image')
                     cropped_filename = video_cropped_path + OS_SEPARATOR + os.path.basename(image_filename)
