@@ -68,9 +68,9 @@ def collect_one_camera(camera_name_):
                     if 1:
                         first_image_checked = False
                         ii_file = 0
-                        paused = False
+                        restart_browser = False
                         prev_time_sec = time.time()
-                        while (time.time() < start_time + VIDEO_RESET_MIN * 60) and (not paused):
+                        while (time.time() < start_time + VIDEO_RESET_MIN * 60) and (not restart_browser):
                             time_elapsed_sec = time.time() - prev_time_sec
                             if time_elapsed_sec >= TIME_BETWEEN_FRAMES_SEC:
                                 img = driver.save_screenshot(temp_image_name)
@@ -87,8 +87,9 @@ def collect_one_camera(camera_name_):
                                     if 0:
                                         filename = r'/media/dana/second local disk1/dana/Netivei/videos/Aluf_Sadeh' + OS_SEPARATOR + 'capture_2022_02_02_12_17_32_733200.png'
                                         camera_name_ = 'Aluf_Sadeh'
-                                    stam, image_ok, paused = preprocess_one_image(filename, camera_name_)
+                                    stam, image_ok, image_status = preprocess_one_image(filename, camera_name_)
                                     first_image_checked = True
+                                    restart_browser = image_status['paused'] or image_status['error']
 
                         print(' ')
 

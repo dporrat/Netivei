@@ -14,7 +14,7 @@ from constants import VIDEO_BASEPATH, CROP_DATA, OS_SEPARATOR, \
     CAMERAS, CAMERA_LIST, \
     DAY_START_UTC, DAY_END_UTC, \
     NETIVEI_WIDTH, NETIVEI_HEIGHT, \
-    CIRCLE_START_X, CIRCLE_START_Y, CIRCLE_WIDTH,  CIRCLE_HEIGHT, \
+    CIRCLE_START_X, CIRCLE_START_Y, CIRCLE_WIDTH, CIRCLE_HEIGHT, \
     TRIANGLE_START_X, TRIANGLE_START_Y, TRIANGLE_WIDTH, TRIANGLE_HEIGHT, \
     NETIVEI_LOGO_BW, \
     OFFLINE_CIRCLE_PIXELS, PLAY_TRIANGLE_PIXELS, CENTER_PIXEL
@@ -31,23 +31,23 @@ def calc_correlation(array1, array2):
 
 def color_pixel(ax_, x_, y_):
     color_size = 0.6
-    x__ = (x_ - color_size/2) * np.ones((2, 2))
-    x__[0, 1] = x_ + color_size/2
-    x__[1, 1] = x_ + color_size/2
-    y__ = (y_ - color_size/2) * np.ones((2, 2))
-    y__[1, 0] = y_ + color_size/2
-    y__[1, 1] = y_ + color_size/2
+    x__ = (x_ - color_size / 2) * np.ones((2, 2))
+    x__[0, 1] = x_ + color_size / 2
+    x__[1, 1] = x_ + color_size / 2
+    y__ = (y_ - color_size / 2) * np.ones((2, 2))
+    y__[1, 0] = y_ + color_size / 2
+    y__[1, 1] = y_ + color_size / 2
     ax_.pcolormesh(x__, y__, np.ones((1, 1)), cmap='spring')
 
 
-def test_cropped_image(img_cropped, camera_name_, image_filename_=None, show_figures=False):
+def test_cropped_image(img_cropped_, camera_name_, image_filename_=None, show_figures=False):
     logo_start_x = CAMERAS[camera_name_]['logo_start_x']
     logo_start_y = CAMERAS[camera_name_]['logo_start_y']
 
-    possible_logo = img_cropped.crop(
+    possible_logo = img_cropped_.crop(
         (logo_start_x, logo_start_y, logo_start_x + NETIVEI_WIDTH, logo_start_y + NETIVEI_HEIGHT))
 
-    possible_circle = img_cropped.crop(
+    possible_circle = img_cropped_.crop(
         (CIRCLE_START_X,
          CIRCLE_START_Y,
          CIRCLE_START_X + CIRCLE_WIDTH,
@@ -55,7 +55,7 @@ def test_cropped_image(img_cropped, camera_name_, image_filename_=None, show_fig
 
     possible_circle_bw = possible_circle.convert('L')
 
-    possible_triangle = img_cropped.crop(
+    possible_triangle = img_cropped_.crop(
         (TRIANGLE_START_X,
          TRIANGLE_START_Y,
          TRIANGLE_START_X + TRIANGLE_WIDTH,
@@ -70,14 +70,14 @@ def test_cropped_image(img_cropped, camera_name_, image_filename_=None, show_fig
 
     # test logo
     if 1:
-        image_ok = True
+        image_ok_ = True
         possible_logo_bw = np.array(possible_logo.convert('L'))
         correlation = calc_correlation(NETIVEI_LOGO_BW, possible_logo_bw)
         if correlation > 0.9:
             found_netivei_logo = True
         else:
             found_netivei_logo = False
-            image_ok = False
+            image_ok_ = False
         if 0:
             fig, ax = plt.subplots(2, 1)
             ax[0].imshow(NETIVEI_LOGO_BW, cmap='gray', vmin=0, vmax=255)
@@ -95,14 +95,14 @@ def test_cropped_image(img_cropped, camera_name_, image_filename_=None, show_fig
             sum_color_circle += possible_circle_np[x_, y_]
         mean_color_circle = sum_color_circle / len(OFFLINE_CIRCLE_PIXELS)
         if mean_color_circle > 160:
-            offline = True
-            image_ok = False
+            waiting = True
+            image_ok_ = False
         else:
-            offline = False
+            waiting = False
 
         if mean_color_circle < 20:
             error = True
-            image_ok = False
+            image_ok_ = False
         else:
             error = False
 
@@ -120,10 +120,10 @@ def test_cropped_image(img_cropped, camera_name_, image_filename_=None, show_fig
             sum_color_triangle += possible_triangle_np[x_, y_]
         mean_color_triangle = sum_color_triangle / len(PLAY_TRIANGLE_PIXELS)
         if mean_color_triangle > 160:
-            paused = True
-            image_ok = False
+            paused_ = True
+            image_ok_ = False
         else:
-            paused = False
+            paused_ = False
 
     # test time
     if 1:
@@ -132,16 +132,16 @@ def test_cropped_image(img_cropped, camera_name_, image_filename_=None, show_fig
             hour_utc = int(image_filename_.split(OS_SEPARATOR)[-1].split('_')[4])
             if hour_utc < DAY_START_UTC or hour_utc >= DAY_END_UTC:
                 night = True
-                image_ok = False
+                image_ok_ = False
             else:
                 night = False
 
     # show image and cropping
     if show_figures:
         plt.figure()
-        plt.imshow(img_cropped)
+        plt.imshow(img_cropped_)
 
-        if image_ok:
+        if image_ok_:
             title_str = 'Good image, save.'
         else:
             if found_netivei_logo:
@@ -149,10 +149,10 @@ def test_cropped_image(img_cropped, camera_name_, image_filename_=None, show_fig
             else:
                 title_str = 'Logo missing.'
 
-            if offline:
+            if waiting:
                 title_str += ' offline.'
 
-            if paused:
+            if paused_:
                 title_str += ' paused.'
 
             if error:
@@ -190,7 +190,13 @@ def test_cropped_image(img_cropped, camera_name_, image_filename_=None, show_fig
                     color_pixel(ax, x_, y_)
 
         plt.show()
-    return image_ok, paused
+    image_status_ = {'paused': paused_,
+                     'found_netivei_logo': found_netivei_logo,
+                     'waiting': waiting,
+                     'error': error,
+                     'night': night,
+                     }
+    return image_ok_, image_status_
 
 
 def preprocess_one_image(image_filename_, camera_name_):
@@ -218,25 +224,26 @@ def preprocess_one_image(image_filename_, camera_name_):
         plt.imshow(img_cropped, interpolation=None)
         plt.show()
 
-    image_ok, paused = test_cropped_image(img_cropped, camera_name_, image_filename_=image_filename_)
-    if image_ok is None:
+    image_ok_, image_status_ = test_cropped_image(img_cropped, camera_name_, image_filename_=image_filename_)
+    if image_ok_ is None:
         return None, None, None
     else:
-        return img_cropped, image_ok, paused
+        return img_cropped, image_ok_, image_status_
 
 
 if __name__ == '__main__':
     this_script_name = os.path.basename(sys.argv[0])
     if 0:
-        img_cropped = Image.open(r"C:\Users\dporrat\Desktop\Netivei\videos\Aluf_Sadeh\cropped_images\capture_2022_02_02_11_30_28_831763.png")
-        camera_name_ = 'Aluf_Sadeh'
-        test_cropped_image(img_cropped, camera_name_, show_figures=True)
+        img_cropped = Image.open(
+            r"C:\Users\dporrat\Desktop\Netivei\videos\Aluf_Sadeh\cropped_images\capture_2022_02_02_11_30_28_831763.png")
+        camera_name = 'Aluf_Sadeh'
+        test_cropped_image(img_cropped, camera_name, show_figures=True)
 
     if 0:
         camera_name = 'Aluf_Sadeh'
         image_filename = VIDEO_BASEPATH + OS_SEPARATOR + camera_name + OS_SEPARATOR + 'capture_2022_02_02_12_17_32_733220.png'
         print(os.path.exists(image_filename))
-        cropped_image, image_ok, paused = preprocess_one_image(image_filename, camera_name)
+        cropped_image, image_ok, image_status = preprocess_one_image(image_filename, camera_name)
 
     video_input_path = VIDEO_BASEPATH
     video_cropped_paths = []
@@ -252,7 +259,7 @@ if __name__ == '__main__':
     # debug
     if 0:
         image_filename = '/media/dana/second local disk1/dana/Netivei/videos/Raanana_Merkaz/capture_2022_01_19_13_49_16_473626.png'
-        cropped_image, image_ok, paused = preprocess_one_image(image_filename, camera_name)
+        cropped_image, image_ok, image_status = preprocess_one_image(image_filename, camera_name)
 
     while True:
         for iiCamera, Video_Path in enumerate(Video_Paths):
@@ -266,7 +273,7 @@ if __name__ == '__main__':
                 if 0:
                     image_filename = VIDEO_BASEPATH + OS_SEPARATOR + 'Aluf_Sadeh' + OS_SEPARATOR + 'capture_2022_01_26_12_55_33_762499.png'
                     image_filename = VIDEO_BASEPATH + OS_SEPARATOR + 'Aluf_Sadeh' + OS_SEPARATOR + 'capture_2022_01_26_12_56_03_865190.png'
-                cropped_image, image_ok, stam = preprocess_one_image(image_filename, camera_name)
+                cropped_image, image_ok, image_status = preprocess_one_image(image_filename, camera_name)
                 if cropped_image is not None:
                     if image_ok:
                         # print(f'File {image_filename} has a good image')
@@ -281,4 +288,4 @@ if __name__ == '__main__':
                     iiFile = 0
                 # print(f'Deleted file {image_filename}')
         print(' ')
-        time.sleep(10)
+        # time.sleep(10)
