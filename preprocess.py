@@ -17,7 +17,8 @@ from constants import VIDEO_BASEPATH, CROP_DATA, OS_SEPARATOR, \
     CIRCLE_START_X, CIRCLE_START_Y, CIRCLE_WIDTH, CIRCLE_HEIGHT, \
     TRIANGLE_START_X, TRIANGLE_START_Y, TRIANGLE_WIDTH, TRIANGLE_HEIGHT, \
     NETIVEI_LOGO_BW, \
-    OFFLINE_CIRCLE_PIXELS, PLAY_TRIANGLE_PIXELS, CENTER_PIXEL
+    OFFLINE_CIRCLE_PIXELS, PLAY_TRIANGLE_PIXELS, CENTER_PIXEL, \
+    TOP_RIGHT_START_X, TOP_RIGHT_START_Y, TOP_RIGHT_WIDTH, TOP_RIGHT_HEIGHT
 
 
 def calc_correlation(array1, array2):
@@ -55,17 +56,26 @@ def test_cropped_image(img_cropped_, camera_name_, image_filename_=None, show_fi
 
     possible_circle_bw = possible_circle.convert('L')
 
-    possible_triangle = img_cropped_.crop(
+    possible_triangle_bw = img_cropped_.crop(
         (TRIANGLE_START_X,
          TRIANGLE_START_Y,
          TRIANGLE_START_X + TRIANGLE_WIDTH,
          TRIANGLE_START_Y + TRIANGLE_HEIGHT)).convert('L')
+
+    top_right_corner = img_cropped_.crop(
+        (TOP_RIGHT_START_X,
+         TOP_RIGHT_START_Y,
+         TOP_RIGHT_START_X + TOP_RIGHT_WIDTH,
+         TOP_RIGHT_START_Y + TOP_RIGHT_HEIGHT))
 
     if 0:
         plt.figure()
         plt.imshow(possible_logo)
         plt.figure()
         plt.imshow(possible_circle_bw, cmap='gray')
+        plt.show()
+        plt.figure()
+        plt.imshow(top_right_corner)
         plt.show()
 
     # test logo
@@ -114,7 +124,7 @@ def test_cropped_image(img_cropped_, camera_name_, image_filename_=None, show_fi
 
     # test triangle
     if 1:
-        possible_triangle_np = np.array(possible_triangle)
+        possible_triangle_np = np.array(possible_triangle_bw)
         sum_color_triangle = 0
         for x_, y_ in PLAY_TRIANGLE_PIXELS:
             sum_color_triangle += possible_triangle_np[x_, y_]
@@ -135,6 +145,47 @@ def test_cropped_image(img_cropped_, camera_name_, image_filename_=None, show_fi
                 image_ok_ = False
             else:
                 night = False
+
+    # test text in top right corner
+    if 0:  # ??? continue here
+        bands = top_right_corner.getbands()
+        red = np.array(top_right_corner.getchannel('R'))
+        green = np.array(top_right_corner.getchannel('G'))
+        blue = np.array(top_right_corner.getchannel('B'))
+
+        top_right_norm_array = np.array(top_right_corner).astype(float)
+        im_array = np.array(top_right_corner)
+
+        for i in range(top_right_norm_array.shape[0]):
+            for j in range(top_right_norm_array.shape[1]):
+                a = im_array[i, j]
+                top_right_norm_array[i, j] = a/np.linalg.norm(a)
+
+        ref_red = 235
+        ref_green = 249
+        ref_blue = 80
+        ref_color = np.array((ref_red, ref_green, ref_blue, 255))
+        ref_color = ref_color/np.linalg.norm(ref_color)
+        yellow = np.dot(top_right_norm_array, ref_color)
+
+        yellow[yellow < 0.975] = 0
+        #
+        # yellow = ref_color
+        #
+        # yellow = (ref_red * red + ref_green * green + ref_blue * blue) / np.linalg.norm((ref_red, ref_green, ref_blue))
+        #
+        # np.dotprod((ref_red,))
+
+        fig, ax = plt.subplots(5, 1)
+        ax[0].imshow(top_right_corner)
+        ax[1].imshow(red, cmap='gray')
+        ax[1].set_title('red')
+        ax[2].imshow(green, cmap='gray')
+        ax[2].set_title('green')
+        ax[3].imshow(blue, cmap='gray')
+        ax[3].set_title('blue')
+        ax[4].imshow(yellow, cmap='gray')
+        ax[4].set_title('yellow')
 
     # show image and cropping
     if show_figures:
@@ -177,9 +228,9 @@ def test_cropped_image(img_cropped_, camera_name_, image_filename_=None, show_fi
                     color_pixel(ax, x_, y_)
 
         # show triangle in middle
-        if show_figures:
+        if 1:
             plt.figure()
-            plt.imshow(possible_triangle, cmap='gray')
+            plt.imshow(possible_triangle_bw, cmap='gray')
             plt.title(f'mean triangle color is {mean_color_triangle:.1f}')
 
             # draw triangle
@@ -188,6 +239,12 @@ def test_cropped_image(img_cropped_, camera_name_, image_filename_=None, show_fi
                 color_pixel(ax, CENTER_PIXEL[0], CENTER_PIXEL[1])
                 for x_, y_ in PLAY_TRIANGLE_PIXELS:
                     color_pixel(ax, x_, y_)
+
+        # show top right corner
+        if 1:
+            plt.figure()
+            plt.imshow(top_right_corner)
+            plt.title('Top Right Corner')
 
         plt.show()
     image_status_ = {'paused': paused_,
@@ -210,7 +267,7 @@ def preprocess_one_image(image_filename_, camera_name_):
     try:
         if img.size not in CROP_DATA.keys():
             raise ValueError(f'{this_function_name}: could not find data from screen of size {img.size}')
-        img_cropped = img.crop((CROP_DATA[img.size]['crop_start_x'],
+        img_cropped_ = img.crop((CROP_DATA[img.size]['crop_start_x'],
                                 CROP_DATA[img.size]['crop_start_y'],
                                 CROP_DATA[img.size]['crop_start_x'] + CROP_DATA[img.size]['crop_width'],
                                 CROP_DATA[img.size]['crop_start_y'] + CROP_DATA[img.size]['crop_height']))
@@ -221,22 +278,26 @@ def preprocess_one_image(image_filename_, camera_name_):
         plt.figure()
         plt.imshow(img)
         plt.figure()
-        plt.imshow(img_cropped, interpolation=None)
+        plt.imshow(img_cropped_, interpolation=None)
         plt.show()
 
-    image_ok_, image_status_ = test_cropped_image(img_cropped, camera_name_, image_filename_=image_filename_)
+    image_ok_, image_status_ = test_cropped_image(img_cropped_, camera_name_, image_filename_=image_filename_)
     if image_ok_ is None:
         return None, None, None
     else:
-        return img_cropped, image_ok_, image_status_
-
+        return img_cropped_, image_ok_, image_status_
 
 if __name__ == '__main__':
     this_script_name = os.path.basename(sys.argv[0])
+
     if 0:
-        img_cropped = Image.open(
-            r"C:\Users\dporrat\Desktop\Netivei\videos\Aluf_Sadeh\cropped_images\capture_2022_02_02_11_30_28_831763.png")
         camera_name = 'Aluf_Sadeh'
+        image_filename = VIDEO_BASEPATH + OS_SEPARATOR + camera_name + OS_SEPARATOR + 'cropped_images' + OS_SEPARATOR + 'capture_2022_02_02_11_30_28_831763.png'
+        camera_name = 'Raanana_Merkaz'
+        image_filename = VIDEO_BASEPATH + OS_SEPARATOR + camera_name + OS_SEPARATOR + 'cropped_images' + OS_SEPARATOR + 'capture_2022_02_02_11_10_07_503876.png'
+
+        print(os.path.exists(image_filename))
+        img_cropped = Image.open(image_filename)
         test_cropped_image(img_cropped, camera_name, show_figures=True)
 
     if 0:
