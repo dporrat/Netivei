@@ -51,7 +51,7 @@ def collect_one_camera(camera_name_):
                     search_element.send_keys(CAMERAS[camera_name_]['search_string'])
 
                 if not driver_error:
-                    time.sleep(30)
+                    time.sleep(15)
                     driver.execute_script("window.scrollTo(0, document.body.scrollHeight/2)")
                     camera_element = locate_element(driver, "//li[@class='col-md-4 cam-item']")
                     if camera_element is None:
@@ -77,7 +77,7 @@ def collect_one_camera(camera_name_):
                                 now_utc = datetime.datetime.now(datetime.timezone.utc)
                                 now_str = now_utc.strftime('%Y_%m_%d_%H_%M_%S_%f')
                                 filename = video_path + OS_SEPARATOR + f'capture_{now_str}.png'
-                                shutil.move(temp_image_name, filename)
+                                shutil.copyfile(temp_image_name, filename)
                                 print('.', end='')
                                 ii_file += 1
                                 if ii_file > 30:
@@ -87,7 +87,7 @@ def collect_one_camera(camera_name_):
                                     if 0:
                                         filename = r'/media/dana/second local disk1/dana/Netivei/videos/Aluf_Sadeh' + OS_SEPARATOR + 'capture_2022_02_02_12_17_32_733200.png'
                                         camera_name_ = 'Aluf_Sadeh'
-                                    stam, image_ok, image_status = preprocess_one_image(filename, camera_name_)
+                                    stam, image_ok, image_status = preprocess_one_image(temp_image_name, camera_name_, skip_time_test=True)
                                     first_image_checked = True
                                     restart_browser = image_status['paused'] or image_status['error']
 

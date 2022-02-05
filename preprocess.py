@@ -256,7 +256,7 @@ def test_cropped_image(img_cropped_, camera_name_, image_filename_=None, show_fi
     return image_ok_, image_status_
 
 
-def preprocess_one_image(image_filename_, camera_name_):
+def preprocess_one_image(image_filename_, camera_name_, skip_time_test=False):
     this_function_name = inspect.currentframe().f_code.co_name
 
     try:
@@ -281,7 +281,10 @@ def preprocess_one_image(image_filename_, camera_name_):
         plt.imshow(img_cropped_, interpolation=None)
         plt.show()
 
-    image_ok_, image_status_ = test_cropped_image(img_cropped_, camera_name_, image_filename_=image_filename_)
+    if skip_time_test:
+        image_ok_, image_status_ = test_cropped_image(img_cropped_, camera_name_)
+    else:
+        image_ok_, image_status_ = test_cropped_image(img_cropped_, camera_name_, image_filename_=image_filename_)
     if image_ok_ is None:
         return None, None, None
     else:
@@ -322,12 +325,12 @@ if __name__ == '__main__':
         image_filename = '/media/dana/second local disk1/dana/Netivei/videos/Raanana_Merkaz/capture_2022_01_19_13_49_16_473626.png'
         cropped_image, image_ok, image_status = preprocess_one_image(image_filename, camera_name)
 
+    iiFile = 0
     while True:
         for iiCamera, Video_Path in enumerate(Video_Paths):
             camera_name = CAMERA_LIST[iiCamera]
             video_cropped_path = video_cropped_paths[iiCamera]
             images = glob.glob(Video_Path + OS_SEPARATOR + 'capture_*.png')
-            iiFile = 0
             for image_filename in images:
                 if not os.path.exists(image_filename):
                     raise FileNotFoundError(f'cannot find {image_filename}')
@@ -344,9 +347,8 @@ if __name__ == '__main__':
                 os.remove(image_filename)
                 print('.', end='')
                 iiFile += 1
-                if iiFile == 30:
-                    print('')
+                if iiFile >= 30:
+                    print(' ')
                     iiFile = 0
                 # print(f'Deleted file {image_filename}')
-        print(' ')
         # time.sleep(10)
