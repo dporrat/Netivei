@@ -12,10 +12,7 @@ from PIL import UnidentifiedImageError
 
 from constants import VIDEO_BASEPATH, CROP_DATA, OS_SEPARATOR, \
     CAMERAS, CAMERA_LIST, \
-    DAY_START_UTC, DAY_END_UTC, \
-    CIRCLE_START_X, CIRCLE_START_Y, CIRCLE_WIDTH, CIRCLE_HEIGHT, \
-    TRIANGLE_START_X, TRIANGLE_START_Y, TRIANGLE_WIDTH, TRIANGLE_HEIGHT, \
-    OFFLINE_CIRCLE_PIXELS, PLAY_TRIANGLE_PIXELS, CENTER_PIXEL
+    DAY_START_UTC, DAY_END_UTC, RAD_PER_DEG
 
 
 def calc_correlation(array1, array2):
@@ -45,22 +42,32 @@ def test_cropped_image(img_cropped_, camera_name_, screen_size, image_filename_=
     netivei_logo_width = CROP_DATA[screen_size]['netivei_logo_width']
     netivei_logo_height = CROP_DATA[screen_size]['netivei_logo_height']
 
+    circle_start_x = CROP_DATA[screen_size]['circle_start_x']
+    circle_start_y = CROP_DATA[screen_size]['circle_start_y']
+    circle_width = CROP_DATA[screen_size]['circle_width']
+    circle_height = CROP_DATA[screen_size]['circle_height']
+
+    triangle_start_x = CROP_DATA[screen_size]['triangle_start_x']
+    triangle_start_y = CROP_DATA[screen_size]['triangle_start_y']
+    triangle_width = CROP_DATA[screen_size]['triangle_width']
+    triangle_height = CROP_DATA[screen_size]['triangle_height']
+
     possible_logo = img_cropped_.crop(
         (logo_start_x, logo_start_y, logo_start_x + netivei_logo_width, logo_start_y + netivei_logo_height))
 
     possible_circle = img_cropped_.crop(
-        (CIRCLE_START_X,
-         CIRCLE_START_Y,
-         CIRCLE_START_X + CIRCLE_WIDTH,
-         CIRCLE_START_Y + CIRCLE_HEIGHT)).convert('L')
+        (circle_start_x,
+         circle_start_y,
+         circle_start_x + circle_width,
+         circle_start_y + circle_height)).convert('L')
 
     possible_circle_bw = possible_circle.convert('L')
 
     possible_triangle_bw = img_cropped_.crop(
-        (TRIANGLE_START_X,
-         TRIANGLE_START_Y,
-         TRIANGLE_START_X + TRIANGLE_WIDTH,
-         TRIANGLE_START_Y + TRIANGLE_HEIGHT)).convert('L')
+        (triangle_start_x,
+         triangle_start_y,
+         triangle_start_x + triangle_width,
+         triangle_start_y + triangle_height)).convert('L')
 
     top_right_corner = img_cropped_.crop(
         (CROP_DATA[screen_size]['crop_width'] - CROP_DATA[screen_size]['top_right_width'],
@@ -109,11 +116,25 @@ def test_cropped_image(img_cropped_, camera_name_, screen_size, image_filename_=
 
     # test circle and error
     if 1:
+        if 1:
+            # reference offline wait circle
+            if 1:
+                circle_radius = CROP_DATA[screen_size]['circle_radius']
+                offline_circle_pixels = []
+                center_pixel = (37, 37)
+                delta_theta_deg = 0.5
+                for radius in [circle_radius - 1, circle_radius, circle_radius + 1]:
+                    for theta in np.arange(0, 360, delta_theta_deg):
+                        x = round(center_pixel[0] + radius * np.cos(theta * RAD_PER_DEG))
+                        y = round(center_pixel[0] + radius * np.sin(theta * RAD_PER_DEG))
+                        if (x, y) not in offline_circle_pixels:
+                            offline_circle_pixels.append((x, y))
+
         possible_circle_np = np.array(possible_circle_bw)
         sum_color_circle = 0
-        for x_, y_ in OFFLINE_CIRCLE_PIXELS:
+        for x_, y_ in offline_circle_pixels:
             sum_color_circle += possible_circle_np[x_, y_]
-        mean_color_circle = sum_color_circle / len(OFFLINE_CIRCLE_PIXELS)
+        mean_color_circle = sum_color_circle / len(offline_circle_pixels)
         if mean_color_circle > 160:
             waiting = True
             image_ok_ = False
@@ -134,11 +155,19 @@ def test_cropped_image(img_cropped_, camera_name_, screen_size, image_filename_=
 
     # test triangle
     if 1:
+        # reference play triangle
+        if 1:
+            play_triangle_pixels = []
+            for x in range(7, 81):
+                for y in np.arange(int(x / 2) - 1, 78 - int(x / 2)):
+                    if (x, y) not in play_triangle_pixels:
+                        play_triangle_pixels.append((x, y))
+
         possible_triangle_np = np.array(possible_triangle_bw)
         sum_color_triangle = 0
-        for x_, y_ in PLAY_TRIANGLE_PIXELS:
+        for x_, y_ in play_triangle_pixels:
             sum_color_triangle += possible_triangle_np[x_, y_]
-        mean_color_triangle = sum_color_triangle / len(PLAY_TRIANGLE_PIXELS)
+        mean_color_triangle = sum_color_triangle / len(play_triangle_pixels)
         if mean_color_triangle > 160:
             paused_ = True
             image_ok_ = False
@@ -162,7 +191,7 @@ def test_cropped_image(img_cropped_, camera_name_, screen_size, image_filename_=
         green = np.array(top_right_corner.getchannel('G'))
         blue = np.array(top_right_corner.getchannel('B'))
 
-        if 1:
+        if 0:
             bands = top_right_corner.getbands()
             gray = np.array(top_right_corner.convert('L'))
 
@@ -174,13 +203,13 @@ def test_cropped_image(img_cropped_, camera_name_, screen_size, image_filename_=
             for i in range(top_right_norm_array.shape[0]):
                 for j in range(top_right_norm_array.shape[1]):
                     color_vec = im_array[i, j]
-                    top_right_norm_array[i, j] = color_vec/np.linalg.norm(color_vec)
+                    top_right_norm_array[i, j] = color_vec / np.linalg.norm(color_vec)
 
             ref_red = 235
             ref_green = 249
             ref_blue = 80
             ref_color = np.array((ref_red, ref_green, ref_blue))
-            ref_color = ref_color/np.linalg.norm(ref_color)
+            ref_color = ref_color / np.linalg.norm(ref_color)
             yellow_corr = np.dot(top_right_norm_array, ref_color)
 
             yellow_corr_threshold = copy.deepcopy(yellow_corr)
@@ -227,7 +256,7 @@ def test_cropped_image(img_cropped_, camera_name_, screen_size, image_filename_=
             yellow_covariance = 0
         else:
             yellow_covariance = calc_correlation(yellow_threshold, yellow_reference)
-        if yellow_covariance > 0.9:
+        if yellow_covariance > 0.7:
             camera_name_ok = True
         else:
             camera_name_ok = False
@@ -286,8 +315,8 @@ def test_cropped_image(img_cropped_, camera_name_, screen_size, image_filename_=
             # draw circle
             if 1:
                 ax = plt.gca()
-                color_pixel(ax, CENTER_PIXEL[0], CENTER_PIXEL[1])
-                for x_, y_ in OFFLINE_CIRCLE_PIXELS:
+                color_pixel(ax, center_pixel[0], center_pixel[1])
+                for x_, y_ in offline_circle_pixels:
                     color_pixel(ax, x_, y_)
 
         # show triangle in middle
@@ -299,8 +328,8 @@ def test_cropped_image(img_cropped_, camera_name_, screen_size, image_filename_=
             # draw triangle
             if 1:
                 ax = plt.gca()
-                color_pixel(ax, CENTER_PIXEL[0], CENTER_PIXEL[1])
-                for x_, y_ in PLAY_TRIANGLE_PIXELS:
+                color_pixel(ax, center_pixel[0], center_pixel[1])
+                for x_, y_ in play_triangle_pixels:
                     color_pixel(ax, x_, y_)
 
         # show top right corner
@@ -310,6 +339,7 @@ def test_cropped_image(img_cropped_, camera_name_, screen_size, image_filename_=
             plt.title('Top Right Corner')
 
         plt.show()
+
     image_status_ = {'paused': paused_,
                      'found_netivei_logo': found_netivei_logo,
                      'waiting': waiting,
@@ -317,6 +347,19 @@ def test_cropped_image(img_cropped_, camera_name_, screen_size, image_filename_=
                      'night': night,
                      'camera_name_ok': camera_name_ok,
                      }
+
+    # show result
+    if 0:
+        if not image_ok_:
+            print(image_filename_)
+            plt.figure()
+            plt.imshow(img_cropped_)
+            plt.title(f'{image_filename_}\n'
+                      f'image_ok_: {image_ok_}\n'
+                      f'paused: {paused_}, found_netivei_logo: {found_netivei_logo}, waiting: {waiting}, \n'
+                      f'error: {error}, night: {night}, camera_name_ok: {camera_name_ok}')
+            plt.show()
+
     return image_ok_, image_status_
 
 
@@ -332,9 +375,9 @@ def preprocess_one_image(image_filename_, camera_name_, skip_time_test=False):
         if img.size not in CROP_DATA.keys():
             raise ValueError(f'{this_function_name}: could not find data for screen of size {img.size}')
         img_cropped_ = img.crop((CROP_DATA[img.size]['crop_start_x'],
-                                CROP_DATA[img.size]['crop_start_y'],
-                                CROP_DATA[img.size]['crop_start_x'] + CROP_DATA[img.size]['crop_width'],
-                                CROP_DATA[img.size]['crop_start_y'] + CROP_DATA[img.size]['crop_height']))
+                                 CROP_DATA[img.size]['crop_start_y'],
+                                 CROP_DATA[img.size]['crop_start_x'] + CROP_DATA[img.size]['crop_width'],
+                                 CROP_DATA[img.size]['crop_start_y'] + CROP_DATA[img.size]['crop_height']))
     except OSError:
         return None, None, None
 
@@ -366,14 +409,13 @@ if __name__ == '__main__':
     this_script_name = os.path.basename(sys.argv[0])
 
     if 0:
-        camera_name = 'Aluf_Sadeh'
-        image_filename = VIDEO_BASEPATH + OS_SEPARATOR + camera_name + OS_SEPARATOR + 'cropped_images' + OS_SEPARATOR + 'capture_2022_02_02_11_30_28_831763.png'
         camera_name = 'Raanana_Merkaz'
-        image_filename = VIDEO_BASEPATH + OS_SEPARATOR + camera_name + OS_SEPARATOR + 'cropped_images' + OS_SEPARATOR + 'capture_2022_02_02_11_10_07_503876.png'
+        image_filename = VIDEO_BASEPATH + OS_SEPARATOR + camera_name + OS_SEPARATOR + 'cropped_images' + OS_SEPARATOR + 'capture_2022_02_06_14_51_15_442178.png'
 
         print(os.path.exists(image_filename))
         img_cropped = Image.open(image_filename)
-        test_cropped_image(img_cropped, camera_name, show_figures=True)
+        screen_size = (1848, 896)
+        test_cropped_image(img_cropped, camera_name, screen_size, show_figures=True)
 
     if 0:
         camera_name = 'Aluf_Sadeh'
@@ -412,8 +454,13 @@ if __name__ == '__main__':
                 cropped_image, image_ok, image_status = preprocess_one_image(image_filename, camera_name)
                 if cropped_image is not None:
                     if image_ok:
+                        parts = os.path.basename(image_filename).split('_')
+                        date_folder = parts[1] + '_' + parts[2] + '_' + parts[3]
+                        if not os.path.exists(video_cropped_path + OS_SEPARATOR + date_folder):
+                            os.mkdir(video_cropped_path + OS_SEPARATOR + date_folder)
                         # print(f'File {image_filename} has a good image')
-                        cropped_filename = video_cropped_path + OS_SEPARATOR + os.path.basename(image_filename)
+                        cropped_filename = video_cropped_path + OS_SEPARATOR + date_folder + \
+                                           OS_SEPARATOR + os.path.basename(image_filename)
                         cropped_image.save(cropped_filename)
                         # print(f'Saved file {cropped_filename}')
                 os.remove(image_filename)

@@ -22,6 +22,15 @@ if 1:
                               'netivei_logo_filename': 'netivei_logo_177_49.png',
                               'top_right_width': 130,
                               'top_right_height': 12,
+                              'circle_start_x': 363,
+                              'circle_start_y': 186,
+                              'circle_width': 75,
+                              'circle_height': 75,
+                              'circle_radius': 33.5,
+                              'triangle_start_x': 365,
+                              'triangle_start_y': 186,
+                              'triangle_width': 80,
+                              'triangle_height': 80,
                               }
     CROP_DATA[(1920, 923)] = {'screen_name': 'selenium on linux',
                               'crop_start_x': 560,
@@ -33,6 +42,15 @@ if 1:
                               'netivei_logo_filename': 'netivei_logo_177_49.png',
                               'top_right_width': 130,
                               'top_right_height': 12,
+                              'circle_start_x': 363,
+                              'circle_start_y': 186,
+                              'circle_width': 75,
+                              'circle_height': 75,
+                              'circle_radius': 33.5,
+                              'triangle_start_x': 365,
+                              'triangle_start_y': 186,
+                              'triangle_width': 80,
+                              'triangle_height': 80,
                               }
     CROP_DATA[(1848, 896)] = {'screen_name': 'selenium on linux',
                               'crop_start_x': 604,
@@ -44,6 +62,15 @@ if 1:
                               'netivei_logo_filename': 'netivei_logo_142_40.png',
                               'top_right_width': 130,
                               'top_right_height': 12,
+                              'circle_start_x': 283,
+                              'circle_start_y': 141,
+                              'circle_width': 75,
+                              'circle_height': 75,
+                              'circle_radius': 27.5,
+                              'triangle_start_x': 285,  # ??? check
+                              'triangle_start_y': 141,
+                              'triangle_width': 80,
+                              'triangle_height': 80,
                               }
 
 if 1:
@@ -75,45 +102,3 @@ if 1:
 
     RAD_PER_DEG = np.pi / 180
 
-# Netivei logo - moved to per screen size
-if 0:
-    NETIVEI_LOGO_WIDTH = 177
-    NETIVEI_LOGO_HEIGHT = 49
-    LOGO_FILENAME = f'netivei_logo.png'
-    NETIVEI_LOGO = Image.open(LOGO_FILENAME)
-    NETIVEI_LOGO_BW = np.array(NETIVEI_LOGO.convert('L'))
-
-# offline wait circle
-if 1:
-    CIRCLE_START_X = 363
-    CIRCLE_START_Y = 186
-    CIRCLE_WIDTH = 75
-    CIRCLE_HEIGHT = 75
-    OFFLINE_CIRCLE_PIXELS = []
-    CENTER_PIXEL = (37, 37)
-    delta_theta_deg = 0.5
-    for radius in [32.5, 33.5, 34.5]:
-        for theta in np.arange(0, 360, delta_theta_deg):
-            x = round(CENTER_PIXEL[0] + radius * np.cos(theta * RAD_PER_DEG))
-            y = round(CENTER_PIXEL[0] + radius * np.sin(theta * RAD_PER_DEG))
-            if (x, y) not in OFFLINE_CIRCLE_PIXELS:
-                OFFLINE_CIRCLE_PIXELS.append((x, y))
-
-# play triangle
-if 1:
-    TRIANGLE_START_X = 365
-    TRIANGLE_START_Y = 186
-    TRIANGLE_WIDTH = 80
-    TRIANGLE_HEIGHT = 80
-    PLAY_TRIANGLE_PIXELS = []
-    for x in range(7, 81):
-        for y in np.arange(int(x / 2) - 1, 78 - int(x / 2)):
-            if (x, y) not in PLAY_TRIANGLE_PIXELS:
-                PLAY_TRIANGLE_PIXELS.append((x, y))
-
-# top right corner - moved to per screen size
-if 0:
-    TOP_RIGHT_START_X = 670
-    TOP_RIGHT_START_Y = 0
-    TOP_RIGHT_WIDTH = 130
-    TOP_RIGHT_HEIGHT = 12
