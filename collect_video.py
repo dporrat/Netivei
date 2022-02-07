@@ -31,7 +31,8 @@ def collect_one_camera(camera_name_):
         if driver is not None:
             driver.close()
 
-        driver = webdriver.Firefox()
+        # driver = webdriver.Firefox()
+        driver = webdriver.Chrome('/usr/lib/chromium-browser/chromedriver')
         driver.maximize_window()
         driver.get(CAMERA_URL)
         driver_error = False
@@ -43,6 +44,7 @@ def collect_one_camera(camera_name_):
                 except:
                     driver_error = True
 
+                # if 0 and not driver_error:
                 if not driver_error:
                     search_element = locate_element(driver, "//input[@class='searchInput']")
                     if search_element is None:
@@ -51,7 +53,7 @@ def collect_one_camera(camera_name_):
                     search_element.send_keys(CAMERAS[camera_name_]['search_string'])
 
                 if not driver_error:
-                    time.sleep(15)
+                    time.sleep(30)
                     driver.execute_script("window.scrollTo(0, document.body.scrollHeight/2)")
                     camera_element = locate_element(driver, "//li[@class='col-md-4 cam-item']")
                     if camera_element is None:
@@ -89,7 +91,7 @@ def collect_one_camera(camera_name_):
                                         camera_name_ = 'Aluf_Sadeh'
                                     stam, image_ok, image_status = preprocess_one_image(temp_image_name, camera_name_, skip_time_test=True)
                                     first_image_checked = True
-                                    restart_browser = image_status['paused'] or image_status['error']
+                                    restart_browser = image_status['paused'] or image_status['error'] or not image_status['camera_name_ok']
 
                         print(' ')
 

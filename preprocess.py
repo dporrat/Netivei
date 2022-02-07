@@ -4,7 +4,7 @@ import glob
 import inspect
 import sys
 import os
-import time
+import copy
 
 import numpy as np
 from PIL import Image
@@ -13,12 +13,9 @@ from PIL import UnidentifiedImageError
 from constants import VIDEO_BASEPATH, CROP_DATA, OS_SEPARATOR, \
     CAMERAS, CAMERA_LIST, \
     DAY_START_UTC, DAY_END_UTC, \
-    NETIVEI_WIDTH, NETIVEI_HEIGHT, \
     CIRCLE_START_X, CIRCLE_START_Y, CIRCLE_WIDTH, CIRCLE_HEIGHT, \
     TRIANGLE_START_X, TRIANGLE_START_Y, TRIANGLE_WIDTH, TRIANGLE_HEIGHT, \
-    NETIVEI_LOGO_BW, \
-    OFFLINE_CIRCLE_PIXELS, PLAY_TRIANGLE_PIXELS, CENTER_PIXEL, \
-    TOP_RIGHT_START_X, TOP_RIGHT_START_Y, TOP_RIGHT_WIDTH, TOP_RIGHT_HEIGHT
+    OFFLINE_CIRCLE_PIXELS, PLAY_TRIANGLE_PIXELS, CENTER_PIXEL
 
 
 def calc_correlation(array1, array2):
@@ -41,12 +38,15 @@ def color_pixel(ax_, x_, y_):
     ax_.pcolormesh(x__, y__, np.ones((1, 1)), cmap='spring')
 
 
-def test_cropped_image(img_cropped_, camera_name_, image_filename_=None, show_figures=False):
+def test_cropped_image(img_cropped_, camera_name_, screen_size, image_filename_=None, show_figures=False):
     logo_start_x = CAMERAS[camera_name_]['logo_start_x']
     logo_start_y = CAMERAS[camera_name_]['logo_start_y']
 
+    netivei_logo_width = CROP_DATA[screen_size]['netivei_logo_width']
+    netivei_logo_height = CROP_DATA[screen_size]['netivei_logo_height']
+
     possible_logo = img_cropped_.crop(
-        (logo_start_x, logo_start_y, logo_start_x + NETIVEI_WIDTH, logo_start_y + NETIVEI_HEIGHT))
+        (logo_start_x, logo_start_y, logo_start_x + netivei_logo_width, logo_start_y + netivei_logo_height))
 
     possible_circle = img_cropped_.crop(
         (CIRCLE_START_X,
@@ -63,26 +63,36 @@ def test_cropped_image(img_cropped_, camera_name_, image_filename_=None, show_fi
          TRIANGLE_START_Y + TRIANGLE_HEIGHT)).convert('L')
 
     top_right_corner = img_cropped_.crop(
-        (TOP_RIGHT_START_X,
-         TOP_RIGHT_START_Y,
-         TOP_RIGHT_START_X + TOP_RIGHT_WIDTH,
-         TOP_RIGHT_START_Y + TOP_RIGHT_HEIGHT))
+        (CROP_DATA[screen_size]['crop_width'] - CROP_DATA[screen_size]['top_right_width'],
+         0,
+         CROP_DATA[screen_size]['crop_width'],
+         CROP_DATA[screen_size]['top_right_height']))
 
     if 0:
         plt.figure()
+        plt.imshow(img_cropped_)
+
+        plt.figure()
         plt.imshow(possible_logo)
+
         plt.figure()
         plt.imshow(possible_circle_bw, cmap='gray')
-        plt.show()
+
         plt.figure()
         plt.imshow(top_right_corner)
+        plt.title('Top Right')
+
         plt.show()
 
     # test logo
     if 1:
         image_ok_ = True
         possible_logo_bw = np.array(possible_logo.convert('L'))
-        correlation = calc_correlation(NETIVEI_LOGO_BW, possible_logo_bw)
+
+        netivei_logo = Image.open(CROP_DATA[screen_size]['netivei_logo_filename'])
+        netivei_logo_bw = np.array(netivei_logo.convert('L'))
+
+        correlation = calc_correlation(netivei_logo_bw, possible_logo_bw)
         if correlation > 0.9:
             found_netivei_logo = True
         else:
@@ -90,7 +100,7 @@ def test_cropped_image(img_cropped_, camera_name_, image_filename_=None, show_fi
             image_ok_ = False
         if 0:
             fig, ax = plt.subplots(2, 1)
-            ax[0].imshow(NETIVEI_LOGO_BW, cmap='gray', vmin=0, vmax=255)
+            ax[0].imshow(netivei_logo_bw, cmap='gray', vmin=0, vmax=255)
             ax[0].set_title('Saved logo')
             ax[1].imshow(possible_logo_bw, cmap='gray', vmin=0, vmax=255)
             ax[1].set_title(f'From Current Image, corrlation is {correlation}')
@@ -147,45 +157,98 @@ def test_cropped_image(img_cropped_, camera_name_, image_filename_=None, show_fi
                 night = False
 
     # test text in top right corner
-    if 0:  # ??? continue here
-        bands = top_right_corner.getbands()
+    if 1:
         red = np.array(top_right_corner.getchannel('R'))
         green = np.array(top_right_corner.getchannel('G'))
         blue = np.array(top_right_corner.getchannel('B'))
 
-        top_right_norm_array = np.array(top_right_corner).astype(float)
-        im_array = np.array(top_right_corner)
+        if 1:
+            bands = top_right_corner.getbands()
+            gray = np.array(top_right_corner.convert('L'))
 
-        for i in range(top_right_norm_array.shape[0]):
-            for j in range(top_right_norm_array.shape[1]):
-                a = im_array[i, j]
-                top_right_norm_array[i, j] = a/np.linalg.norm(a)
+            im_array = np.array(top_right_corner)
+            if 'A' in bands:
+                im_array = im_array[:, :, :3]
+            top_right_norm_array = np.array(im_array).astype(float)
 
-        ref_red = 235
-        ref_green = 249
-        ref_blue = 80
-        ref_color = np.array((ref_red, ref_green, ref_blue, 255))
-        ref_color = ref_color/np.linalg.norm(ref_color)
-        yellow = np.dot(top_right_norm_array, ref_color)
+            for i in range(top_right_norm_array.shape[0]):
+                for j in range(top_right_norm_array.shape[1]):
+                    color_vec = im_array[i, j]
+                    top_right_norm_array[i, j] = color_vec/np.linalg.norm(color_vec)
 
-        yellow[yellow < 0.975] = 0
-        #
-        # yellow = ref_color
-        #
-        # yellow = (ref_red * red + ref_green * green + ref_blue * blue) / np.linalg.norm((ref_red, ref_green, ref_blue))
-        #
-        # np.dotprod((ref_red,))
+            ref_red = 235
+            ref_green = 249
+            ref_blue = 80
+            ref_color = np.array((ref_red, ref_green, ref_blue))
+            ref_color = ref_color/np.linalg.norm(ref_color)
+            yellow_corr = np.dot(top_right_norm_array, ref_color)
 
-        fig, ax = plt.subplots(5, 1)
-        ax[0].imshow(top_right_corner)
-        ax[1].imshow(red, cmap='gray')
-        ax[1].set_title('red')
-        ax[2].imshow(green, cmap='gray')
-        ax[2].set_title('green')
-        ax[3].imshow(blue, cmap='gray')
-        ax[3].set_title('blue')
-        ax[4].imshow(yellow, cmap='gray')
-        ax[4].set_title('yellow')
+            yellow_corr_threshold = copy.deepcopy(yellow_corr)
+
+            yellow_corr_threshold[yellow_corr < 0.96] = 0
+            yellow_corr_threshold[yellow_corr >= 0.96] = 1
+
+        yellow = red.astype('int') + green.astype('int') - blue.astype('int')
+        yellow_threshold = copy.deepcopy(yellow)
+        yellow_threshold[yellow < 180] = 0
+        yellow_threshold = np.round(yellow_threshold.astype(float) / np.max(yellow_threshold) * 255).astype('uint8')
+
+        if 0:  # save as referenc3
+            yellow_img = Image.fromarray(yellow)
+            yellow_img.save('/home/user1/Dana Porrat/Netivei/Code/Raanana_Merkaz_130_12.png')
+
+        if 0:
+            plt.figure()
+            ax0 = plt.subplot(511)
+            ax0.imshow(top_right_corner)
+
+            ax = plt.subplot(512, sharex=ax0, sharey=ax0)
+            ax.imshow(yellow_corr, cmap='gray')
+            ax.set_title('yellow_corr')
+
+            ax = plt.subplot(513, sharex=ax0, sharey=ax0)
+            ax.imshow(yellow_corr_threshold, cmap='gray')
+            ax.set_title('yellow_corr threshold')
+
+            ax = plt.subplot(514, sharex=ax0, sharey=ax0)
+            ax.imshow(yellow, cmap='gray')
+            ax.set_title('yellow2')
+
+            ax = plt.subplot(515, sharex=ax0, sharey=ax0)
+            ax.imshow(yellow_threshold, cmap='gray')
+            ax.set_title('yellow2_threshold')
+
+            plt.show()
+
+        yellow_reference = np.array(Image.open(CAMERAS[camera_name_]['camera_name_file']))
+
+        yellow_threshold[yellow_reference == 0] = 0
+        if np.all(yellow_threshold == 0):
+            yellow_covariance = 0
+        else:
+            yellow_covariance = calc_correlation(yellow_threshold, yellow_reference)
+        if yellow_covariance > 0.9:
+            camera_name_ok = True
+        else:
+            camera_name_ok = False
+            image_ok_ = False
+
+        if 0:
+            plt.figure()
+            plt.imshow(top_right_corner)
+
+            plt.figure()
+            ax0 = plt.subplot(311)
+            ax0.imshow(yellow, cmap='gray')
+            ax0.set_title('yellow')
+
+            ax0 = plt.subplot(312)
+            ax0.imshow(yellow_threshold, cmap='gray')
+            ax0.set_title(f'yellow_threshold, covariance is {yellow_covariance:.2f}')
+
+            ax = plt.subplot(313, sharex=ax0, sharey=ax0)
+            ax.imshow(yellow_reference, cmap='gray')
+            ax.set_title(f'yellow reference')
 
     # show image and cropping
     if show_figures:
@@ -252,6 +315,7 @@ def test_cropped_image(img_cropped_, camera_name_, image_filename_=None, show_fi
                      'waiting': waiting,
                      'error': error,
                      'night': night,
+                     'camera_name_ok': camera_name_ok,
                      }
     return image_ok_, image_status_
 
@@ -266,13 +330,17 @@ def preprocess_one_image(image_filename_, camera_name_, skip_time_test=False):
 
     try:
         if img.size not in CROP_DATA.keys():
-            raise ValueError(f'{this_function_name}: could not find data from screen of size {img.size}')
+            raise ValueError(f'{this_function_name}: could not find data for screen of size {img.size}')
         img_cropped_ = img.crop((CROP_DATA[img.size]['crop_start_x'],
                                 CROP_DATA[img.size]['crop_start_y'],
                                 CROP_DATA[img.size]['crop_start_x'] + CROP_DATA[img.size]['crop_width'],
                                 CROP_DATA[img.size]['crop_start_y'] + CROP_DATA[img.size]['crop_height']))
     except OSError:
         return None, None, None
+
+    netivei_logo_filename = None
+    if 0:
+        netivei_logo_filename = CROP_DATA[img.size]['netivei_logo_filename']
 
     if 0:
         plt.figure()
@@ -282,13 +350,17 @@ def preprocess_one_image(image_filename_, camera_name_, skip_time_test=False):
         plt.show()
 
     if skip_time_test:
-        image_ok_, image_status_ = test_cropped_image(img_cropped_, camera_name_)
+        image_ok_, image_status_ = test_cropped_image(img_cropped_, camera_name_,
+                                                      img.size)
     else:
-        image_ok_, image_status_ = test_cropped_image(img_cropped_, camera_name_, image_filename_=image_filename_)
+        image_ok_, image_status_ = test_cropped_image(img_cropped_, camera_name_,
+                                                      img.size,
+                                                      image_filename_=image_filename_)
     if image_ok_ is None:
         return None, None, None
     else:
         return img_cropped_, image_ok_, image_status_
+
 
 if __name__ == '__main__':
     this_script_name = os.path.basename(sys.argv[0])
