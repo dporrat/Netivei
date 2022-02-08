@@ -61,7 +61,7 @@ def collect_one_camera(camera_name_):
 
                     camera_element.click()
 
-                    time.sleep(3)
+                    time.sleep(10)
                     video_path = VIDEO_BASEPATH + OS_SEPARATOR + camera_name_
                     if not os.path.exists(video_path):
                         os.mkdir(video_path)
