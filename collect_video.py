@@ -29,7 +29,10 @@ def collect_one_camera(camera_name_):
     driver = None
     while True:
         if driver is not None:
-            driver.close()
+            try:
+                driver.close()
+            except:
+                stam=0
 
         # driver = webdriver.Firefox()
         driver = webdriver.Chrome('/usr/lib/chromium-browser/chromedriver')
@@ -49,8 +52,11 @@ def collect_one_camera(camera_name_):
                     search_element = locate_element(driver, "//input[@class='searchInput']")
                     if search_element is None:
                         raise ValueError(f'Cannot find search link for {camera_name_}')
-                    search_element.click()
-                    search_element.send_keys(CAMERAS[camera_name_]['search_string'])
+                    try:
+                        search_element.click()
+                        search_element.send_keys(CAMERAS[camera_name_]['search_string'])
+                    except:
+                        driver_error = True
 
                 if not driver_error:
                     time.sleep(30)
@@ -67,7 +73,7 @@ def collect_one_camera(camera_name_):
                         os.mkdir(video_path)
 
                     # save images
-                    if 1:
+                    try:
                         first_image_checked = False
                         ii_file = 0
                         restart_browser = False
@@ -94,6 +100,8 @@ def collect_one_camera(camera_name_):
                                     restart_browser = image_status['paused'] or image_status['error'] or not image_status['camera_name_ok']
 
                         print(' ')
+                    except:
+                        driver_error = True
 
                 start_time = time.time()
 
