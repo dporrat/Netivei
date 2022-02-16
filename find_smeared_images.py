@@ -19,6 +19,29 @@ from matplotlib import pyplot as plt
 from constants import VIDEO_BASEPATH, OS_SEPARATOR
 
 
+def predict_image(model_, image_file, data_transforms_, device_):
+    image = Image.open(image_file).convert('RGB')
+    image_tensor = data_transforms_['predict'](image).float()
+    image_tensor = image_tensor.unsqueeze_(0)
+    input_ = torch.autograd.Variable(image_tensor)
+    input_ = input_.to(device_)
+    output = model_(input_)
+    index = output.data.cpu().numpy().argmax()
+    return index
+
+
+def predict_smear(model_, image_folder_, class_names_, data_transforms_, device_):
+    image_files = glob.glob(image_folder_ + OS_SEPARATOR + '*')
+    predictions = []
+    plt.figure()
+    for file in image_files:
+        prediction = predict_image(model_, file, data_transforms_, device_)
+        predictions.append(prediction)
+        plt.imshow(Image.open(file))
+        plt.title(f'{os.path.basename(file)}: estimation is {class_names_[prediction]}')
+        plt.show()
+
+
 def imshow(inp, title=None):
     """Imshow for Tensor."""
     inp = inp.numpy().transpose((1, 2, 0))
@@ -32,94 +55,123 @@ def imshow(inp, title=None):
     plt.pause(0.001)  # pause a bit so that plots are updated
 
 
-def train_model(model_, criterion_, optimizer_, scheduler, num_epochs=25):
+def run_model_on_data(model_, optimizer_, criterion_, scheduler_, phase):
+    if phase == 'train':
+        model_.train()  # Set model to training mode
+    else:
+        model_.eval()  # Set model to evaluate mode
+
+    running_loss = 0.0
+    running_corrects = 0
+
+    # Iterate over data.
+    for inputs_, labels in data_loaders[phase]:
+        inputs_ = inputs_.to(device)
+        labels = labels.to(device)
+
+        # zero the parameter gradients
+        optimizer_.zero_grad()
+
+        # forward
+        # track history if only in train
+        with torch.set_grad_enabled(phase == 'train'):
+            outputs = model_(inputs_)
+            _, predictions_ = torch.max(outputs, 1)
+            loss_ = criterion_(outputs, labels)
+
+            # backward + optimize only if in training phase
+            if phase == 'train':
+                loss_.backward()
+                optimizer_.step()
+
+        # statistics
+        running_loss += loss_.item() * inputs_.size(0)
+        running_corrects += torch.sum(predictions_ == labels.data)
+    if phase == 'train':
+        scheduler_.step()
+
+    epoch_loss = running_loss / dataset_sizes[phase]
+    epoch_acc = running_corrects.double() / dataset_sizes[phase]
+
+    return epoch_loss, epoch_acc
+
+
+def train_model(model_, criterion_, optimizer_, scheduler_, num_epochs=25):
     since = time.time()
 
     best_model_wts = copy.deepcopy(model_.state_dict())
     best_acc = 0.0
 
+    training_done = False
+    train_loss_prev = 10
+
     for epoch in range(num_epochs):
-        print('Epoch {}/{}'.format(epoch, num_epochs - 1))
-        print('-' * 10)
+        if not training_done:
+            print(f'Epoch {epoch}/{num_epochs}')
+            print('-' * 10)
 
-        # Each epoch has a training and validation phase
-        for phase in ['train', 'validate']:
-            if phase == 'train':
-                model_.train()  # Set model to training mode
-            else:
-                model_.eval()  # Set model to evaluate mode
+            # Each epoch has a training and validation phase
+            for phase in ['train', 'validate']:
+                epoch_loss, epoch_acc = run_model_on_data(model_, optimizer_, criterion_, scheduler_, phase)
+                print(f'{phase} Loss: {epoch_loss:.4f} Accuracy: {epoch_acc:.4f}')
 
-            running_loss = 0.0
-            running_corrects = 0
+                if phase == 'train':
+                    train_loss = epoch_loss
+                    # print(f'train loss is {train_loss}, prev loss is {train_loss_prev}, '
+                    #       f'loss difference is {np.abs(train_loss - train_loss_prev)}')
+                    if np.abs(train_loss - train_loss_prev) < 1e-4:
+                        training_done = True
+                        print('Training loss converged')
+                    else:
+                        train_loss_prev = train_loss
 
-            # Iterate over data.
-            for inputs_, labels in dataloaders[phase]:
-                inputs_ = inputs_.to(device)
-                labels = labels.to(device)
-
-                # zero the parameter gradients
-                optimizer_.zero_grad()
-
-                # forward
-                # track history if only in train
-                with torch.set_grad_enabled(phase == 'train'):
-                    outputs = model_(inputs_)
-                    _, predictions_ = torch.max(outputs, 1)
-                    loss_ = criterion_(outputs, labels)
-
-                    # backward + optimize only if in training phase
-                    if phase == 'train':
-                        loss_.backward()
-                        optimizer_.step()
-
-                # statistics
-                running_loss += loss_.item() * inputs_.size(0)
-                running_corrects += torch.sum(predictions_ == labels.data)
-            if phase == 'train':
-                scheduler.step()
-
-            epoch_loss = running_loss / dataset_sizes[phase]
-            epoch_acc = running_corrects.double() / dataset_sizes[phase]
-
-            print('{} Loss: {:.4f} Acc: {:.4f}'.format(
-                phase, epoch_loss, epoch_acc))
-
-            # deep copy the model
-            if phase == 'val' and epoch_acc > best_acc:
-                best_acc = epoch_acc
-                best_model_wts = copy.deepcopy(model_.state_dict())
-
-        print()
+                # deep copy the model
+                if phase == 'validate' and epoch_acc > best_acc:  # take the first good model, before over-fitting occured
+                    best_acc = epoch_acc
+                    best_model_wts = copy.deepcopy(model_.state_dict())
+                    print(f'Best accuracy on validate! (so far)')
+            print()
 
     time_elapsed = time.time() - since
-    print('Training complete in {:.0f}m {:.0f}s'.format(
-        time_elapsed // 60, time_elapsed % 60))
-    print('Best val Acc: {:4f}'.format(best_acc))
+    print(f'Training completed in {time_elapsed // 60:.0f}m {time_elapsed % 60:.0f}s')
+    print(f'Best val Accuracy: {best_acc:4f}')
 
     # load best model weights
     model_.load_state_dict(best_model_wts)
     return model_
 
 
-def visualize_model(model_, num_images=6):
+def visualize_model(model_, class_names_, num_images=6):
+    print(f'class_names_ is {class_names_}')
     was_training = model_.training
     model_.eval()
     images_so_far = 0
     fig_ = plt.figure()
 
     with torch.no_grad():
-        for i, (inputs_, labels) in enumerate(dataloaders['val']):
+        print(f'class_names_ is {class_names_}')
+        for i, (inputs_, labels_) in enumerate(data_loaders['validate']):
+            # print(f'i={i}, class_names_ is {class_names_}')
             inputs_ = inputs_.to(device)
-            labels = labels.to(device)
+            labels_ = labels_.to(device)
+            # print(f'i={i}, class_names_ is {class_names_}')
 
-            outputs = model_(inputs_)
-            _, predictions_ = torch.max(outputs, 1)
+            outputs_ = model_(inputs_)
+            # print(f'inputs_.size() is {inputs_.size()}')
+            # print(f'outputs_.size() is {outputs_.size()}')
+            _, predictions_ = torch.max(outputs_, 1)
+            # print(f'_ is {_}, predictions_ is {predictions_}')
 
+            # print(f'i={i}, class_names_ is {class_names_}')
             for j in range(inputs_.size()[0]):
                 images_so_far += 1
-                ax_ = plt.subplot(num_images//2, 2, images_so_far)
+                ax_ = plt.subplot(num_images // 2, 2, images_so_far)
                 ax_.axis('off')
-                ax_.set_title('predicted: {}'.format(class_names[predictions_[j]]))
+                # print(f'i={i}, j={j}, class_names_ is {class_names_}, predictions_ is {predictions_}')
+                # print(f'i={i}, j={j}, class_names_ is {class_names_}, predictions_[j] is {predictions_[j]}')
+                # print(f'class_names_[predictions_[j]] is {class_names_[predictions_[j]]}')
+                # print(f'predictions_[j] is {predictions_[j]}')
+                ax_.set_title(f'true: {class_names_[labels_[j]]}, predicted: {class_names_[predictions_[j]]}')
                 imshow(inputs_.cpu().data[j])
 
                 if images_so_far == num_images:
@@ -128,145 +180,148 @@ def visualize_model(model_, num_images=6):
         model_.train(mode=was_training)
 
 
-data_transforms = {
-    'train': torchvision.transforms.Compose([
-        torchvision.transforms.Resize(224),
-        torchvision.transforms.ToTensor(),
-        torchvision.transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-    ]),
-    'validate': torchvision.transforms.Compose([
-        torchvision.transforms.Resize(224),
-        torchvision.transforms.ToTensor(),
-        torchvision.transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-    ]),
-}
+def show_results(model_, data_loader_, class_names_, num_images=6):
+    print(f'class_names_ is {class_names_}')
+    was_training = model_.training
+    model_.eval()
+    images_so_far = 0
+    fig_ = plt.figure()
 
-data_dir = VIDEO_BASEPATH + OS_SEPARATOR + 'Raanana_Merkaz' + OS_SEPARATOR + 'cropped_images' + \
-           OS_SEPARATOR + 'find_smears'
-image_datasets = {x: torchvision.datasets.ImageFolder(os.path.join(data_dir, x),
-                                                      data_transforms[x])
-                  for x in ['train', 'validate']}
+    with torch.no_grad():
+        print(f'class_names_ is {class_names_}')
+        for i, (inputs_, labels_) in enumerate(data_loader_['validate']):
+            # print(f'i={i}, class_names_ is {class_names_}')
+            inputs_ = inputs_.to(device)
+            labels_ = labels_.to(device)
+            # print(f'i={i}, class_names_ is {class_names_}')
 
-dataloaders = {x: torch.utils.data.DataLoader(image_datasets[x], batch_size=4,
-                                              shuffle=True, num_workers=4)
-               for x in ['train', 'validate']}
-dataset_sizes = {x: len(image_datasets[x]) for x in ['train', 'validate']}
-class_names = image_datasets['train'].classes
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+            outputs_ = model_(inputs_)
+            # print(f'inputs_.size() is {inputs_.size()}')
+            # print(f'outputs_.size() is {outputs_.size()}')
+            _, predictions_ = torch.max(outputs_, 1)
+            # print(f'_ is {_}, predictions_ is {predictions_}')
 
-# Get a batch of training data
-inputs, classes = next(iter(dataloaders['train']))
+            # print(f'i={i}, class_names_ is {class_names_}')
+            for j in range(inputs_.size()[0]):
+                images_so_far += 1
+                ax_ = plt.subplot(num_images // 2, 2, images_so_far)
+                ax_.axis('off')
+                # print(f'i={i}, j={j}, class_names_ is {class_names_}, predictions_ is {predictions_}')
+                # print(f'i={i}, j={j}, class_names_ is {class_names_}, predictions_[j] is {predictions_[j]}')
+                # print(f'class_names_[predictions_[j]] is {class_names_[predictions_[j]]}')
+                # print(f'predictions_[j] is {predictions_[j]}')
+                ax_.set_title(f'true: {class_names_[labels_[j]]}, predicted: {class_names_[predictions_[j]]}')
+                imshow(inputs_.cpu().data[j])
 
-# Make a grid from batch
-out = torchvision.utils.make_grid(inputs)
+                if images_so_far == num_images:
+                    model_.train(mode=was_training)
+                    return
+        model_.train(mode=was_training)
 
-if 0:
-    imshow(out, title=[class_names[x] for x in classes])
 
-if 0:
-    data_dict_file = r'/home/user1/Dana Porrat/Netivei/learn/learn_smear_training_data.pkl'
-    if os.path.exists(data_dict_file):
-        data_dict = pickle.load(open(data_dict_file, "rb"))
-        print(f'Loaded file {data_dict_file}')
-        x_list = data_dict['x_list']
-        y_list = data_dict['y_list']
-        x_mean = data_dict['x_mean']
-        x_std = data_dict['x_std']
+if __name__ == '__main__':
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    print(f'Torch Runs on {device}')
+
+    image_folder = VIDEO_BASEPATH + OS_SEPARATOR + 'Raanana_Merkaz' + OS_SEPARATOR + 'cropped_images' + \
+                   OS_SEPARATOR + '2022_02_16'
+
+    model_path = '/home/user1/Dana Porrat/Netivei' + OS_SEPARATOR + 'learn' + OS_SEPARATOR + 'find_smears_model'
+    if not os.path.exists(model_path):
+        os.mkdir(model_path)
+    model_filename = model_path + OS_SEPARATOR + 'TorchModel'
+    class_names_file = model_path + OS_SEPARATOR + 'class_names.pickle'
+    transforms_file = model_path + OS_SEPARATOR + 'transforms.pickle'
+
+    model = torchvision.models.vgg16(pretrained=True)
+    # block change in some layers
+    if 0:
+        for param in model.features.parameters():
+            param.requires_grad = False
+    num_in = model.classifier[6].in_features
+    model.classifier[6] = torch.nn.Linear(num_in, 2)
+
+    if os.path.exists(model_filename) and os.path.exists(class_names_file) and os.path.exists(transforms_file):
+        model.load_state_dict(torch.load(model_filename))
+        model = model.to(device)
+        with open(class_names_file, 'rb') as infile:
+            class_names = pickle.load(infile)
+        with open(transforms_file, 'rb') as infile:
+            data_transforms = pickle.load(infile)
     else:
-        image_ok_folder = r'/home/user1/Dana Porrat/Netivei/videos/Raanana_Merkaz/cropped_images/images_ok'
-        image_smeared_folder = '/home/user1/Dana Porrat/Netivei/videos/Raanana_Merkaz/cropped_images/images_smeared'
+        data_transforms = {
+            'train': torchvision.transforms.Compose([
+                torchvision.transforms.Resize((224, 224),
+                                              interpolation=torchvision.transforms.InterpolationMode.NEAREST),
+                # Resize(224) gives better results
+                torchvision.transforms.ToTensor(),
+                torchvision.transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+            ]),
+            'validate': torchvision.transforms.Compose([
+                torchvision.transforms.Resize((224, 224),
+                                              interpolation=torchvision.transforms.InterpolationMode.NEAREST),
+                torchvision.transforms.ToTensor(),
+                torchvision.transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+            ]),
+            'predict': torchvision.transforms.Compose([
+                torchvision.transforms.Resize((224, 224),
+                                              interpolation=torchvision.transforms.InterpolationMode.NEAREST),
+                torchvision.transforms.ToTensor(),
+                torchvision.transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+            ]),
+        }
 
-        image_ok_files = glob.glob(image_ok_folder + '/*.png')
-        image_smeared_files = glob.glob(image_smeared_folder + '/*.png')
+        data_dir = VIDEO_BASEPATH + OS_SEPARATOR + 'Raanana_Merkaz' + OS_SEPARATOR + 'cropped_images' + \
+                   OS_SEPARATOR + 'find_smears'
 
-        x_list = []
-        y_list = []
-        x_mean = []
-        x_std = []
+        image_datasets = {x: torchvision.datasets.ImageFolder(os.path.join(data_dir, x),
+                                                              data_transforms[x])
+                          for x in ['train', 'validate']}
+        data_loaders = {x: torch.utils.data.DataLoader(image_datasets[x], batch_size=4,
+                                                       shuffle=True, num_workers=4)
+                        for x in ['train', 'validate']}
+        class_names = copy.deepcopy(image_datasets['train'].classes)
 
-        for ii_file, file in enumerate(image_ok_files + image_smeared_files):
-            if ii_file % 100 == 0:
-                print(f'File {ii_file} of {len(image_ok_files + image_smeared_files)} ...')
-            img = Image.open(file).convert('RGB')
-            img_np = np.array(img)
-            if 1:
-                img_224 = cv2.resize(img_np, (224, 224))
-            else:
-                shape = img_np.shape
-                y_start = (shape[0] - 224) // 2
-                x_start = (shape[1] - 224) // 2
-                img_224 = img_np[y_start:y_start + 224, x_start:x_start + 224, :]
-            if 0:
-                fig, ax = plt.subplots(2, 1)
-                ax[0].imshow(img_np)
-                ax[1].imshow(img_224)
-                plt.show()
+        dataset_sizes = {x: len(image_datasets[x]) for x in ['train', 'validate']}
 
-            # img_224_colorfirst = np.moveaxis(img_224, -1, 0)  # channel RGB, height, width
-            x_list.append(img_224)
-            x_mean.append(np.mean(img_224, axis=(0, 1)))
-            x_std.append(np.std(img_224, axis=(0, 1)))
-            if file in image_ok_files:
-                y_list.append(1)
-            elif file in image_smeared_files:
-                y_list.append(0)
-            else:
-                raise ValueError(f'Problem with file {file}')
+        # Get a batch of training data
+        inputs, classes = next(iter(data_loaders['train']))
+        print(f'Training inputs.size() is {inputs.size()}')
 
-        data_dict = {'x_list': x_list, 'y_list': y_list, 'x_mean': x_mean, 'x_std': x_std}
-        pickle.dump(data_dict, open(data_dict_file, "wb"))
-        print(f'Saved file {data_dict_file}')
+        # Make a grid from batch
+        out = torchvision.utils.make_grid(inputs)
 
-    img_mean = np.mean(np.array(x_mean), axis=0)
-    img_std = np.mean(np.array(x_std), axis=0)
-
-    normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                     std=[0.229, 0.224, 0.225])
-    toTensor = transforms.ToTensor()
-    # toPILImage = transforms.ToPILImage(mode='RGB')
-
-    img_224_normalized = []
-    for image in x_list:
-        img_224_normalized.append(normalize(toTensor(image)))
-
-        # un-normalize image and show
         if 0:
-            img_unnorm = img_224_normalized[-1].cpu().detach().numpy().transpose((1, 2, 0))
-            for ii in range(3):
-                img_unnorm[:, :, ii] = img_std[ii] * img_unnorm[:, :, ii] + img_mean[ii]
-            img_unnorm -= np.min(img_unnorm)
-            img_unnorm = img_unnorm.astype(np.uint8)
+            imshow(out, title=[class_names[x] for x in classes])
 
-            if 0:
-                fig, ax = plt.subplots(2, 2)
-                ax[0][0].imshow(image)
-                ax[0][1].imshow(img_unnorm[:, :, 0], cmap='gray')
-                ax[0][1].set_title('0-R')
+        model = model.to(device)
 
-                ax[1][0].imshow(img_unnorm[:, :, 1], cmap='gray')
-                ax[1][0].set_title('1-G')
+        criterion = torch.nn.CrossEntropyLoss()
 
-                ax[1][1].imshow(img_unnorm[:, :, 2], cmap='gray')
-                ax[1][1].set_title('2-B')
+        # Observe that all parameters are being optimized
+        optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
 
-            fig, ax = plt.subplots(1, 2)
-            ax[0].imshow(image)
-            ax[1].imshow(img_unnorm)
+        # Decay LR by a factor of 0.1 every 7 epochs
+        exp_lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)
 
-            plt.show()
+        model = train_model(model, criterion, optimizer, exp_lr_scheduler,
+                            num_epochs=51)
 
-model = torchvision.models.vgg16(pretrained=True)
-model.classifier[6].out_features = 2
+        torch.save(model.state_dict(), model_filename)
+        print(f'Saved model in {model_filename}')
 
-model = model.to(device)
+        with open(class_names_file, 'wb') as outfile:
+            pickle.dump(class_names, outfile)
+        print(f'Saved class names in {class_names_file}')
 
-criterion = torch.nn.CrossEntropyLoss()
+        with open(transforms_file, 'wb') as outfile:
+            pickle.dump(data_transforms, outfile)
+        print(f'Saved data transforms in {transforms_file}')
 
-# Observe that all parameters are being optimized
-optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
+    # predict
+    predict_smear(model, image_folder, class_names, data_transforms, device)
 
-# Decay LR by a factor of 0.1 every 7 epochs
-exp_lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)
-
-model = train_model(model, criterion, optimizer, exp_lr_scheduler,
-                    num_epochs=25)
+    # evaluate
+    model.eval()
+    visualize_model(model, class_names)
+    plt.show()

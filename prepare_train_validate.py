@@ -36,9 +36,13 @@ random.shuffle(images_smeared_list)
 train_folder = find_smears_folder + OS_SEPARATOR + 'train'
 validate_folder = find_smears_folder + OS_SEPARATOR + 'validate'
 
-shutil.rmtree(train_folder)
+
+if os.path.exists(train_folder):
+    shutil.rmtree(train_folder)
 os.mkdir(train_folder)
-shutil.rmtree(validate_folder)
+
+if os.path.exists(validate_folder):
+    shutil.rmtree(validate_folder)
 os.mkdir(validate_folder)
 
 train_folder_ok = train_folder + OS_SEPARATOR + 'ok'

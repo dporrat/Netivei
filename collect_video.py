@@ -35,7 +35,14 @@ def collect_one_camera(camera_name_):
                 stam=0
 
         # driver = webdriver.Firefox()
-        driver = webdriver.Chrome('/usr/lib/chromium-browser/chromedriver')
+
+        if 0:
+            options = webdriver.ChromeOptions()
+            options.add_argument("headless")
+            driver = webdriver.Chrome('/usr/lib/chromium-browser/chromedriver', chrome_options=options)
+        else:
+            driver = webdriver.Chrome('/usr/lib/chromium-browser/chromedriver')
+
         driver.maximize_window()
         driver.get(CAMERA_URL)
         driver_error = False
