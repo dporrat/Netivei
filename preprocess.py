@@ -373,7 +373,11 @@ def preprocess_one_image(image_filename_, camera_name_, skip_time_test=False):
 
     try:
         if img.size not in CROP_DATA.keys():
-            raise ValueError(f'{this_function_name}: could not find data for screen of size {img.size}')
+            print(f'{this_function_name}: could not find data for screen of size {img.size} for {image_filename_}')
+            if 1:
+                return None, None, None
+            else:
+                raise ValueError(f'{this_function_name}: could not find data for screen of size {img.size} for {image_filename_}')
         img_cropped_ = img.crop((CROP_DATA[img.size]['crop_start_x'],
                                  CROP_DATA[img.size]['crop_start_y'],
                                  CROP_DATA[img.size]['crop_start_x'] + CROP_DATA[img.size]['crop_width'],
